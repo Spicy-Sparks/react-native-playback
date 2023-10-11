@@ -11,7 +11,7 @@
 @property (nonatomic, strong, readonly) NSDictionary *source;
 @property (nonatomic, strong) id timeObserver;
 
-- (instancetype)initWithEventEmitter:(RCTEventEmitter *)eventEmitter;
+- (instancetype)initWithEventEmitterAndId:(RCTEventEmitter *)eventEmitter playerId:(NSString *)playerId;
 - (void)setSource:(NSDictionary *)source;
 - (void)setVolume:(NSNumber *)volume;
 - (void)seek:(NSDictionary *)seek;

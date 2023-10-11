@@ -14,6 +14,7 @@ class Player {
   private nativeEventSubscription: EmitterSubscription | null = null;
 
   constructor(onCreated?: () => any) {
+    this.playerId = this.generateId();
     (async () => {
       await this.mount();
       onCreated && onCreated();
@@ -22,7 +23,9 @@ class Player {
 
   async mount() {
     try {
-      this.playerId = await Module.createPlayer();
+      if(!this.playerId)
+        this.playerId = this.generateId()
+      await Module.createPlayer(this.playerId);
       this.nativeEventSubscription = emitter.addListener(
         'playerEvent',
         (data) => this.onNativeEvent(this.playerId, data)
@@ -68,6 +71,10 @@ class Player {
   seek(time: { time: number; tolerance?: number }) {
     if (!this.playerId || !time || typeof time.time !== 'number') return;
     Module.seek(this.playerId, time);
+  }
+
+  generateId() {
+    return new Date().getTime().toString() + Math.floor(Math.random() * 100)
   }
 
   onNativeEvent(thisPlayerId: string, data: any) {

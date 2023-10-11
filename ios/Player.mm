@@ -4,14 +4,13 @@
 
 @implementation Player
 
-- (instancetype)initWithEventEmitter:(RCTEventEmitter *)eventEmitter {
+- (instancetype)initWithEventEmitterAndId:(RCTEventEmitter *)eventEmitter playerId:(NSString *)playerId {
     self = [super init];
     if (self) {
         _eventEmitter = eventEmitter;
-        _playerId = [[NSUUID UUID] UUIDString];
+        _playerId = playerId;
         _player = [[AVPlayer alloc] init];
         _player.allowsExternalPlayback = true;
-        _player.allowsAirPlayVideo = true;
         
         __weak __typeof(self) weakSelf = self;
         

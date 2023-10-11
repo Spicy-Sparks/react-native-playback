@@ -8,11 +8,11 @@ RCT_EXPORT_MODULE()
 
 static NSMutableDictionary *players = [NSMutableDictionary dictionary];
 
-RCT_EXPORT_METHOD(createPlayer:(RCTPromiseResolveBlock)resolve
+RCT_EXPORT_METHOD(createPlayer:(NSString *)playerId
+                  resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)
 {
-    Player *player = [[Player alloc] initWithEventEmitter:self];
-    NSString *playerId = player.playerId;
+    Player *player = [[Player alloc] initWithEventEmitterAndId:self playerId:playerId];
     [players setObject:player forKey:playerId];
     resolve(player.playerId);
 }
