@@ -170,10 +170,24 @@
         }
         else if([keyPath isEqualToString:@"status"]) {
             if (_playerItem.status == AVPlayerItemStatusReadyToPlay) {
+                float duration = CMTimeGetSeconds(_playerItem.asset.duration);
+                
+                if (isnan(duration)) {
+                    duration = 0.0;
+                }
+                
                 if(_eventEmitter != nil) {
                     [_eventEmitter sendEventWithName:@"playerEvent" body:@{
                         @"playerId": _playerId,
-                        @"eventType": @"ON_LOAD"
+                        @"eventType": @"ON_LOAD",
+                        @"duration": [NSNumber numberWithFloat:duration],
+                        @"currentTime": [NSNumber numberWithFloat:CMTimeGetSeconds(_playerItem.currentTime)],
+                        @"canPlayReverse": [NSNumber numberWithBool:_playerItem.canPlayReverse],
+                        @"canPlayFastForward": [NSNumber numberWithBool:_playerItem.canPlayFastForward],
+                        @"canPlaySlowForward": [NSNumber numberWithBool:_playerItem.canPlaySlowForward],
+                        @"canPlaySlowReverse": [NSNumber numberWithBool:_playerItem.canPlaySlowReverse],
+                        @"canStepBackward": [NSNumber numberWithBool:_playerItem.canStepBackward],
+                        @"canStepForward": [NSNumber numberWithBool:_playerItem.canStepForward]
                     }];
                 }
             } else if (_playerItem.status == AVPlayerItemStatusFailed) {

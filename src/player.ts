@@ -1,7 +1,12 @@
 import type { EmitterSubscription } from 'react-native'
 import Module, { emitter } from './module'
-import type { SourceType } from './definitions'
-import sourceEqualityFn from './sourceEqualityFn'
+
+export type SourceType = {
+  url: string
+  headers?: {
+    [header: string]: string
+  }
+}
 
 class Player {
   private playerId: string = ''
@@ -46,9 +51,12 @@ class Player {
 
   setSource(source: SourceType) {
     if (!this.playerId || !source) return
-    if (this.source && sourceEqualityFn(this.source, source)) return
     this.source = source
     Module.setSource(this.playerId, source)
+  }
+
+  getSource() {
+    return this.source
   }
 
   play() {
