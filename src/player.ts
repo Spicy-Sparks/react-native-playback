@@ -11,6 +11,8 @@ export type SourceType = {
 class Player {
   private playerId: string = ''
   private source: SourceType | null = null
+  private volume: number = 1
+  private loop: boolean = false
   private eventListeners: Record<string, Function[]> = {}
   private nativeEventSubscription: EmitterSubscription | null = null
 
@@ -51,11 +53,12 @@ class Player {
 
   setSource(source: SourceType) {
     if (!this.playerId || !source) return
-    this.source = source
+    this.source = { ...source }
     Module.setSource(this.playerId, source)
   }
 
   getSource() {
+    console.log("in return", this.source, this.playerId)
     return this.source
   }
 
@@ -71,7 +74,22 @@ class Player {
 
   setVolume(volume: number) {
     if (!this.playerId || typeof volume !== 'number') return
+    this.volume = volume
     Module.setVolume(this.playerId, volume)
+  }
+
+  getVolume() {
+    return this.volume
+  }
+
+  setLoop(loop: boolean) {
+    if (!this.playerId || typeof loop !== 'boolean') return
+    this.loop = loop
+    Module.setLoop(this.playerId, loop)
+  }
+
+  getLoop() {
+    return this.loop
   }
 
   seek(time: { time: number, tolerance?: number }) {

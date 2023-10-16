@@ -85,6 +85,20 @@ RCT_EXPORT_METHOD(setVolume:(NSString *)playerId
     resolve(nil);
 }
 
+RCT_EXPORT_METHOD(setLoop:(NSString *)playerId
+                  loop:(BOOL)loop
+                  resolve:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject)
+{
+    Player *player = [players objectForKey:playerId];
+    if(player == nil) {
+        reject(@"E_PLAYER_NOT_FOUND", @"playerId is invalid", nil);
+        return;
+    }
+    [player setLoop:loop];
+    resolve(nil);
+}
+
 RCT_EXPORT_METHOD(seek:(NSString *)playerId
                   seek:(NSDictionary *)seek
                   resolve:(RCTPromiseResolveBlock)resolve
