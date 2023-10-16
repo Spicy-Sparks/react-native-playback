@@ -118,6 +118,10 @@
     [_player setVolume:[volume floatValue]];
 }
 
+- (void)setLoop:(BOOL)loop {
+    _loop = loop;
+}
+
 - (void)seek:(NSDictionary *)seek
 {
   NSNumber *time = seek[@"time"];
@@ -264,6 +268,11 @@
         @"playerId": _playerId,
         @"eventType": @"ON_END"
     }];
+    
+    if (_loop) {
+        AVPlayerItem *item = [notification object];
+        [item seekToTime:kCMTimeZero completionHandler:nil];
+    }
 }
 
 - (void)audioRouteChanged:(NSNotification *)notification
