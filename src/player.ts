@@ -58,7 +58,6 @@ class Player {
   }
 
   getSource() {
-    console.log("in return", this.source, this.playerId)
     return this.source
   }
 
