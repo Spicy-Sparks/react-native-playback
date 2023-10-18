@@ -40,10 +40,6 @@
         
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(didFailToFinishPlaying:) name: AVPlayerItemFailedToPlayToEndTimeNotification object:nil];
             
-        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidEnterBackground:) name:UIApplicationDidEnterBackgroundNotification object:nil];
-            
-        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationWillEnterForeground:) name:UIApplicationWillEnterForegroundNotification object:nil];
-            
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(audioRouteChanged:) name:AVAudioSessionRouteChangeNotification object:nil];
     }
     return self;
@@ -94,14 +90,19 @@
     
     [_player replaceCurrentItemWithPlayerItem:_playerItem];
     
-    if([source objectForKey:@"autoplay"]) {
+    id autoplay = [source objectForKey:@"autoplay"];
+    if(autoplay && [autoplay boolValue]) {
         _paused = false;
         [_player play];
     }
-    else _paused = true;
+    else {
+        _paused = true;
+        [_player pause];
+    }
     
-    if([source objectForKey:@"volume"])
-        [_player setVolume:1.0];
+    id volume = [source objectForKey:@"volume"];
+    if(volume && [volume isKindOfClass:[NSNumber class]])
+        [_player setVolume:[volume floatValue]];
 
     /*AVPlayerViewController *playerViewController = [[AVPlayerViewController alloc] init];
     playerViewController.player = _player;*/

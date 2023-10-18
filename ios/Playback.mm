@@ -72,7 +72,7 @@ RCT_EXPORT_METHOD(pause:(NSString *)playerId
 }
 
 RCT_EXPORT_METHOD(setVolume:(NSString *)playerId
-                  volume:(NSNumber *)volume
+                  volume:(nonnull NSNumber *)volume
                   resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)
 {
