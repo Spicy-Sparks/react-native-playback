@@ -93,26 +93,36 @@
     [audioSession setActive:YES error:nil];
     
     [_player replaceCurrentItemWithPlayerItem:_playerItem];
-    [_player play];
-    [_player setVolume:1.0];
+    
+    if([source objectForKey:@"autoplay"]) {
+        _paused = false;
+        [_player play];
+    }
+    else _paused = true;
+    
+    if([source objectForKey:@"volume"])
+        [_player setVolume:1.0];
 
     /*AVPlayerViewController *playerViewController = [[AVPlayerViewController alloc] init];
     playerViewController.player = _player;*/
 }
 
 - (void)play {
+    _paused = false;
     if(_player == nil)
         return;
     [_player play];
 }
 
 - (void)pause {
+    _paused = true;
     if(_player == nil)
         return;
     [_player pause];
 }
 
 - (void)setVolume:(NSNumber *)volume {
+    _volume = volume;
     if(_player == nil)
         return;
     [_player setVolume:[volume floatValue]];

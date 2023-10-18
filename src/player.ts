@@ -2,7 +2,7 @@ import type { EmitterSubscription } from 'react-native'
 import Module, { emitter } from './module'
 
 export type SourceType = {
-  url: string
+  url: string,
   headers?: {
     [header: string]: string
   }
@@ -51,10 +51,14 @@ class Player {
     return this.playerId
   }
 
-  setSource(source: SourceType) {
-    if (!this.playerId || !source) return
-    this.source = { ...source }
-    Module.setSource(this.playerId, source)
+  setSource(data: SourceType & {
+    autoplay?: boolean,
+    volume?: number,
+  }) {
+    if (!this.playerId || !data || !data.url) return
+    const { autoplay, volume, ...source } = data
+    this.source = source
+    Module.setSource(this.playerId, data)
   }
 
   getSource() {

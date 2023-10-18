@@ -10,6 +10,8 @@
 @property (nonatomic, strong, readonly) AVPlayerItem *playerItem;
 @property (nonatomic, strong, readonly) NSDictionary *source;
 @property (nonatomic, assign, readonly) BOOL loop;
+@property (nonatomic, assign, readonly) BOOL paused;
+@property (nonatomic, strong, readonly) NSNumber *volume;
 @property (nonatomic, strong) id timeObserver;
 
 - (instancetype)initWithEventEmitterAndId:(RCTEventEmitter *)eventEmitter playerId:(NSString *)playerId;
