@@ -25,6 +25,9 @@
     _playerId = playerId;
     _player = [[Playback players] objectForKey:_playerId];
     
+    if(_player == nil)
+        return;
+    
     _playerViewController.player = _player.player;
     
     UIViewController *viewController = nil;
