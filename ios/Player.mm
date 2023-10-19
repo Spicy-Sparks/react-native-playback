@@ -16,6 +16,8 @@
         
         [_player addObserver:self forKeyPath:@"rate" options:0 context:nil];
         
+        [self configureAudio];
+        
         if(_timeObserver != nil)
             [_player removeTimeObserver:_timeObserver];
         _timeObserver = [_player addPeriodicTimeObserverForInterval:CMTimeMake(1, 1) queue:dispatch_get_main_queue() usingBlock:^(CMTime time) {
@@ -103,15 +105,13 @@
     id volume = [source objectForKey:@"volume"];
     if(volume && [volume isKindOfClass:[NSNumber class]])
         [_player setVolume:[volume floatValue]];
-
-    /*AVPlayerViewController *playerViewController = [[AVPlayerViewController alloc] init];
-    playerViewController.player = _player;*/
 }
 
 - (void)play {
     _paused = false;
     if(_player == nil)
         return;
+    [self configureAudio];
     [_player play];
 }
 
@@ -301,8 +301,23 @@
             break;
         default:
             break;
-
   }
+}
+
+- (void)configureAudio
+{
+    AVAudioSession *session = [AVAudioSession sharedInstance];
+    AVAudioSessionCategory category = AVAudioSessionCategoryPlayback;
+    AVAudioSessionCategoryOptions options = 0;
+
+    if(@available(iOS 13.0, *)) {
+        [session setCategory:category mode:AVAudioSessionModeDefault routeSharingPolicy:AVAudioSessionRouteSharingPolicyLongFormAudio options:options error:nil];
+    } else if(@available(iOS 11.0, *)) {
+        [session setCategory:category mode:AVAudioSessionModeDefault routeSharingPolicy:AVAudioSessionRouteSharingPolicyLongForm options:options error:nil];
+    } else {
+        [session setCategory:category withOptions:options error:nil];
+    }
+    [session setCategory:category error:nil];
 }
 
 @end

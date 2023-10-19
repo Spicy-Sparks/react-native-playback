@@ -14,7 +14,7 @@
     
     if(self) {
         _playerViewController = [[VideoViewController alloc] init];
-        _playerViewController.showsPlaybackControls = YES;
+        _playerViewController.updatesNowPlayingInfoCenter = NO;
         _playerViewController.view.frame = self.bounds;
         
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidEnterBackground:) name:UIApplicationDidEnterBackgroundNotification object:nil];
