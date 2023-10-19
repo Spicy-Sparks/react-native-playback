@@ -51,6 +51,7 @@
     if(_player != nil) {
         [_player pause];
         [_player removeObserver:self forKeyPath:@"rate"];
+        _player = nil;
     }
     
     if(_timeObserver != nil) {
@@ -64,9 +65,14 @@
         [_playerItem removeObserver:self forKeyPath:@"playbackBufferEmpty"];
         [_playerItem removeObserver:self forKeyPath:@"playbackLikelyToKeepUp"];
         [_playerItem removeObserver:self forKeyPath:@"timedMetadata"];
+        _playerItem = nil;
     }
     
     [[NSNotificationCenter defaultCenter] removeObserver:self];
+    
+    _paused = false;
+    _loop = false;
+    _source = nil;
 }
 
 - (void)setSource:(NSDictionary *)source {
@@ -103,8 +109,10 @@
     }
     
     id volume = [source objectForKey:@"volume"];
-    if(volume && [volume isKindOfClass:[NSNumber class]])
+    if(volume && [volume isKindOfClass:[NSNumber class]]) {
+        _volume = volume;
         [_player setVolume:[volume floatValue]];
+    }
 }
 
 - (void)play {
