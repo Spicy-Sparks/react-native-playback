@@ -23,11 +23,9 @@ public class Player {
   private double volume;
   private boolean loop;
 
-  private boolean autoplay;
   private final com.google.android.exoplayer2.Player.Listener eventsListener;
-
-  private Handler progressHandler = new Handler();
-  private Runnable progressRunnable;
+  private final Handler progressHandler = new Handler();
+  private final Runnable progressRunnable;
 
   public Player (ReactContext reactContext, String playerId) {
     this.playerId = playerId;
@@ -100,10 +98,6 @@ public class Player {
             params.putBoolean("canStepBackward", true);
             params.putBoolean("canStepForward", true);
             sendEvent(params);
-
-            if(autoplay)
-              player.play();
-
             break;
           }
           case com.google.android.exoplayer2.Player.STATE_ENDED: {
@@ -191,13 +185,11 @@ public class Player {
     this.player.prepare();
 
     if(source.hasKey("autoplay") && source.getBoolean("autoplay")) {
-      this.autoplay = true;
       this.paused = false;
-      this.player.play();
+      this.player.setPlayWhenReady(true);
     } else  {
-      this.autoplay = false;
       this.paused = true;
-      this.player.pause();
+      this.player.setPlayWhenReady(false);
     }
 
     if(source.hasKey("volume")) {
