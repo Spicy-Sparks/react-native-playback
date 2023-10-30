@@ -109,4 +109,10 @@ public class PlaybackModule extends ReactContextBaseJavaModule {
     player.seek(seek);
     promise.resolve(null);
   }
+
+  @ReactMethod
+  public void addListener(String eventName) { }
+
+  @ReactMethod
+  public void removeListeners(Integer count) { }
 }

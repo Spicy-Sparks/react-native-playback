@@ -1,18 +1,20 @@
 package com.playback;
 
-import android.content.Context;
+import android.os.Handler;
+
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.media3.common.MediaItem;
-import androidx.media3.common.MediaMetadata;
-import androidx.media3.common.PlaybackException;
-import androidx.media3.common.Timeline;
-import androidx.media3.exoplayer.ExoPlayer;
 
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
+import com.google.android.exoplayer2.ExoPlayer;
+import com.google.android.exoplayer2.MediaItem;
+import com.google.android.exoplayer2.MediaMetadata;
+import com.google.android.exoplayer2.PlaybackException;
+import com.google.android.exoplayer2.Timeline;
 
 public class Player {
   public String playerId = "";
@@ -20,46 +22,72 @@ public class Player {
   private boolean paused;
   private double volume;
   private boolean loop;
-  private androidx.media3.common.Player.Listener eventsListener;
+
+  private boolean autoplay;
+  private final com.google.android.exoplayer2.Player.Listener eventsListener;
+
+  private Handler progressHandler = new Handler();
+  private Runnable progressRunnable;
 
   public Player (ReactContext reactContext, String playerId) {
     this.playerId = playerId;
     this.player = new ExoPlayer.Builder(reactContext).build();
-    this.eventsListener = new androidx.media3.common.Player.Listener() {
-      private void sendEvent(String eventName,
-                             @Nullable WritableMap params) {
+
+    this.progressRunnable = new Runnable() {
+      private void sendEvent(@Nullable WritableMap params) {
         reactContext
           .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-          .emit(eventName, params);
+          .emit("playerEvent", params);
       }
 
       @Override
-      public void onTimelineChanged(Timeline timeline, int reason) {
-        androidx.media3.common.Player.Listener.super.onTimelineChanged(timeline, reason);
+      public void run() {
+        if (player != null && player.isPlaying()) {
+          WritableMap params = Arguments.createMap();
+          params.putString("eventType", "ON_PROGRESS");
+          params.putString("playerId", playerId);
+          params.putDouble("currentTime", player.getCurrentPosition());
+          params.putDouble("duration", player.getDuration());
+          sendEvent(params);
+          progressHandler.postDelayed(this, 500);
+        }
+      }
+    };
+
+    this.eventsListener = new com.google.android.exoplayer2.Player.Listener() {
+      private void sendEvent(@Nullable WritableMap params) {
+        reactContext
+          .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+          .emit("playerEvent", params);
       }
 
       @Override
-      public void onMediaMetadataChanged(MediaMetadata mediaMetadata) {
-        androidx.media3.common.Player.Listener.super.onMediaMetadataChanged(mediaMetadata);
+      public void onTimelineChanged(@NonNull Timeline timeline, int reason) {
+        com.google.android.exoplayer2.Player.Listener.super.onTimelineChanged(timeline, reason);
+      }
+
+      @Override
+      public void onMediaMetadataChanged(@NonNull MediaMetadata mediaMetadata) {
+        com.google.android.exoplayer2.Player.Listener.super.onMediaMetadataChanged(mediaMetadata);
       }
 
       @Override
       public void onIsLoadingChanged(boolean isLoading) {
-        androidx.media3.common.Player.Listener.super.onIsLoadingChanged(isLoading);
+        com.google.android.exoplayer2.Player.Listener.super.onIsLoadingChanged(isLoading);
       }
 
       @Override
       public void onPlaybackStateChanged(int playbackState) {
-        androidx.media3.common.Player.Listener.super.onPlaybackStateChanged(playbackState);
+        com.google.android.exoplayer2.Player.Listener.super.onPlaybackStateChanged(playbackState);
         switch (playbackState) {
-          case androidx.media3.common.Player.STATE_BUFFERING: {
+          case com.google.android.exoplayer2.Player.STATE_BUFFERING: {
             WritableMap params = Arguments.createMap();
             params.putString("eventType", "ON_BUFFERING");
             params.putString("playerId", playerId);
-            sendEvent("playerEvent", params);
+            sendEvent(params);
             break;
           }
-          case androidx.media3.common.Player.STATE_READY: {
+          case com.google.android.exoplayer2.Player.STATE_READY: {
             WritableMap params = Arguments.createMap();
             params.putString("eventType", "ON_LOAD");
             params.putString("playerId", playerId);
@@ -71,21 +99,25 @@ public class Player {
             params.putBoolean("canPlaySlowReverse", true);
             params.putBoolean("canStepBackward", true);
             params.putBoolean("canStepForward", true);
-            sendEvent("playerEvent", params);
+            sendEvent(params);
+
+            if(autoplay)
+              player.play();
+
             break;
           }
-          case androidx.media3.common.Player.STATE_ENDED: {
+          case com.google.android.exoplayer2.Player.STATE_ENDED: {
             WritableMap params = Arguments.createMap();
             params.putString("eventType", "ON_END");
             params.putString("playerId", playerId);
-            sendEvent("playerEvent", params);
+            sendEvent(params);
             break;
           }
-          case androidx.media3.common.Player.STATE_IDLE: {
+          case com.google.android.exoplayer2.Player.STATE_IDLE: {
             WritableMap params = Arguments.createMap();
             params.putString("eventType", "ON_STALLED");
             params.putString("playerId", playerId);
-            sendEvent("playerEvent", params);
+            sendEvent(params);
             break;
           }
         }
@@ -93,40 +125,49 @@ public class Player {
 
       @Override
       public void onIsPlayingChanged(boolean isPlaying) {
-        androidx.media3.common.Player.Listener.super.onIsPlayingChanged(isPlaying);
+        com.google.android.exoplayer2.Player.Listener.super.onIsPlayingChanged(isPlaying);
+        WritableMap params = Arguments.createMap();
+        params.putString("eventType", isPlaying ? "ON_PLAY" : "ON_PAUSE");
+        params.putString("playerId", playerId);
+        sendEvent(params);
+
+        if(isPlaying)
+          progressHandler.post(progressRunnable);
+        else
+          progressHandler.removeCallbacks(progressRunnable);
       }
 
       @Override
-      public void onPlayerError(PlaybackException error) {
-        androidx.media3.common.Player.Listener.super.onPlayerError(error);
+      public void onPlayerError(@NonNull PlaybackException error) {
+        com.google.android.exoplayer2.Player.Listener.super.onPlayerError(error);
         WritableMap params = Arguments.createMap();
         params.putString("eventType", "ON_ERROR");
         params.putString("playerId", playerId);
         params.putInt("errorCode", error.errorCode);
         params.putString("errorMessage", error.getMessage());
-        sendEvent("playerEvent", params);
+        sendEvent(params);
       }
 
       @Override
       public void onPlayerErrorChanged(@Nullable PlaybackException error) {
-        androidx.media3.common.Player.Listener.super.onPlayerErrorChanged(error);
+        com.google.android.exoplayer2.Player.Listener.super.onPlayerErrorChanged(error);
         WritableMap params = Arguments.createMap();
         params.putString("eventType", "ON_ERROR");
         params.putString("playerId", playerId);
         params.putInt("errorCode", error.errorCode);
         params.putString("errorMessage", error.getMessage());
-        sendEvent("playerEvent", params);
+        sendEvent(params);
       }
 
       @Override
-      public void onPositionDiscontinuity(androidx.media3.common.Player.PositionInfo oldPosition, androidx.media3.common.Player.PositionInfo newPosition, int reason) {
-        androidx.media3.common.Player.Listener.super.onPositionDiscontinuity(oldPosition, newPosition, reason);
+      public void onPositionDiscontinuity(@NonNull com.google.android.exoplayer2.Player.PositionInfo oldPosition, @NonNull com.google.android.exoplayer2.Player.PositionInfo newPosition, int reason) {
+        com.google.android.exoplayer2.Player.Listener.super.onPositionDiscontinuity(oldPosition, newPosition, reason);
         WritableMap params = Arguments.createMap();
         params.putString("eventType", "ON_SEEK");
         params.putString("playerId", playerId);
-        params.putDouble("seekTime", newPosition.positionMs / 100);
-        params.putDouble("seekTime", newPosition.positionMs / 100);
-        sendEvent("playerEvent", params);
+        params.putDouble("seekTime", (double) newPosition.positionMs / 100);
+        params.putDouble("seekTime", (double) newPosition.positionMs / 100);
+        sendEvent(params);
       }
     };
     this.player.addListener(eventsListener);
@@ -138,7 +179,7 @@ public class Player {
         this.player.addListener(this.eventsListener);
       this.player = null;
     }
-
+    progressHandler.removeCallbacks(progressRunnable);
     this.paused = false;
     this.loop = false;
     this.volume = 1;
@@ -150,9 +191,11 @@ public class Player {
     this.player.prepare();
 
     if(source.hasKey("autoplay") && source.getBoolean("autoplay")) {
+      this.autoplay = true;
       this.paused = false;
       this.player.play();
     } else  {
+      this.autoplay = false;
       this.paused = true;
       this.player.pause();
     }

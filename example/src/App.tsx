@@ -12,6 +12,7 @@ export default function App() {
 
       player.setSource({
         url: 'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+        autoplay: true,
         headers: {
           Host: 'google.com',
         },
