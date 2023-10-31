@@ -8,7 +8,7 @@ import com.facebook.react.uimanager.SimpleViewManager;
 import com.facebook.react.uimanager.ThemedReactContext;
 import com.facebook.react.uimanager.annotations.ReactProp;
 
-public class VideoViewManager extends SimpleViewManager<View> {
+public class VideoViewManager extends SimpleViewManager<VideoView> {
   public static final String REACT_CLASS = "VideoView";
 
   @Override
@@ -19,7 +19,7 @@ public class VideoViewManager extends SimpleViewManager<View> {
 
   @Override
   @NonNull
-  public View createViewInstance(ThemedReactContext reactContext) {
+  public VideoView createViewInstance(ThemedReactContext reactContext) {
     return new VideoView(reactContext);
   }
 

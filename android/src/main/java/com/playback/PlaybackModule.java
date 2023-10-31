@@ -27,9 +27,9 @@ public class PlaybackModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void createPlayer(String playerId, Promise promise) {
-    var player = new Player(getReactApplicationContext(), playerId);
+    InitCallback callback = () -> promise.resolve(playerId);
+    var player = new Player(getReactApplicationContext(), playerId, callback);
     players.put(playerId, player);
-    promise.resolve(player.playerId);
   }
 
   @ReactMethod
@@ -45,7 +45,7 @@ public class PlaybackModule extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
-  public  void setSource(String playerId, ReadableMap source, Promise promise) {
+  public void setSource(String playerId, ReadableMap source, Promise promise) {
     var player = players.get(playerId);
     if(player == null) {
       promise.reject("E_PLAYER_NOT_FOUND", "playerId is invalid");
@@ -56,7 +56,7 @@ public class PlaybackModule extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
-  public  void play(String playerId, Promise promise) {
+  public void play(String playerId, Promise promise) {
     var player = players.get(playerId);
     if(player == null) {
       promise.reject("E_PLAYER_NOT_FOUND", "playerId is invalid");
@@ -67,7 +67,7 @@ public class PlaybackModule extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
-  public  void pause(String playerId, Promise promise) {
+  public void pause(String playerId, Promise promise) {
     var player = players.get(playerId);
     if(player == null) {
       promise.reject("E_PLAYER_NOT_FOUND", "playerId is invalid");
@@ -78,7 +78,7 @@ public class PlaybackModule extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
-  public  void setLoop(String playerId, boolean loop, Promise promise) {
+  public void setLoop(String playerId, boolean loop, Promise promise) {
     var player = players.get(playerId);
     if(player == null) {
       promise.reject("E_PLAYER_NOT_FOUND", "playerId is invalid");
@@ -89,7 +89,7 @@ public class PlaybackModule extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
-  public  void setVolume(String playerId, double volume, Promise promise) {
+  public void setVolume(String playerId, double volume, Promise promise) {
     var player = players.get(playerId);
     if(player == null) {
       promise.reject("E_PLAYER_NOT_FOUND", "playerId is invalid");
@@ -100,7 +100,7 @@ public class PlaybackModule extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
-  public  void setVolume(String playerId, ReadableMap seek, Promise promise) {
+  public void setVolume(String playerId, ReadableMap seek, Promise promise) {
     var player = players.get(playerId);
     if(player == null) {
       promise.reject("E_PLAYER_NOT_FOUND", "playerId is invalid");
