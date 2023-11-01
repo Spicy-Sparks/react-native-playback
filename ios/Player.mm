@@ -80,10 +80,17 @@
     
     NSMutableDictionary *headers = [NSMutableDictionary dictionary];
     
-    NSURL *url = [NSURL URLWithString:source[@"url"]];
-    AVURLAsset *asset = [AVURLAsset URLAssetWithURL:url options:@{
-        @"AVURLAssetHTTPHeaderFieldsKey": headers
-    }];
+    NSString *urlString = source[@"url"];
+    NSURL *url;
+    AVURLAsset *asset;
+
+    if ([urlString hasPrefix:@"http://"] || [urlString hasPrefix:@"https://"]) {
+        url = [NSURL URLWithString:urlString];
+        asset = [AVURLAsset URLAssetWithURL:url options:@{@"AVURLAssetHTTPHeaderFieldsKey": headers}];
+    } else {
+        url = [NSURL fileURLWithPath:urlString];
+        asset = [AVURLAsset URLAssetWithURL:url options:nil];
+    }
     
     _playerItem = [AVPlayerItem playerItemWithAsset:asset];
     [_playerItem addObserver:self forKeyPath:@"loadedTimeRanges" options:NSKeyValueObservingOptionNew context:nil];
