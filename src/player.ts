@@ -41,8 +41,12 @@ class Player {
 
   async disponse() {
     try {
-      if (this.nativeEventSubscription)
-        emitter.removeSubscription(this.nativeEventSubscription)
+      if (this.nativeEventSubscription) {
+        if(emitter.removeSubscription)
+          emitter.removeSubscription(this.nativeEventSubscription)
+        else
+          this.nativeEventSubscription.remove()
+      }
       await Module.disponsePlayer(this.playerId)
     } catch (err) {}
   }
