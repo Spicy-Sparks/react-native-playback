@@ -23,30 +23,35 @@ class Player {
       onCreated && onCreated()
     })()
   }
+  
+  removeEventListener() {
+    if (this.nativeEventSubscription) {
+      if(emitter.removeSubscription)
+        emitter.removeSubscription(this.nativeEventSubscription)
+      else
+        this.nativeEventSubscription.remove()
+    }
+  }
 
   async mount() {
     try {
       if(!this.playerId)
         this.playerId = this.generateId()
-      await Module.createPlayer(this.playerId)
       this.nativeEventSubscription = emitter.addListener(
         'playerEvent',
         (data) => this.onNativeEvent(this.playerId, data)
       )
+      await Module.createPlayer(this.playerId)
       this.emit('created')
     } catch (err) {
+      this.removeEventListener()
       this.playerId = ''
     }
   }
 
   async disponse() {
     try {
-      if (this.nativeEventSubscription) {
-        if(emitter.removeSubscription)
-          emitter.removeSubscription(this.nativeEventSubscription)
-        else
-          this.nativeEventSubscription.remove()
-      }
+      this.removeEventListener()
       await Module.disponsePlayer(this.playerId)
     } catch (err) {}
   }
