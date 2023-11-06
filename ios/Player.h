@@ -21,6 +21,6 @@
 - (void)seek:(NSDictionary *)seek;
 - (void)play;
 - (void)pause;
-- (void)disponse;
+- (void)dispose;
 
 @end

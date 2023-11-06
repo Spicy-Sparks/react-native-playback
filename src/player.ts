@@ -49,10 +49,10 @@ class Player {
     }
   }
 
-  async disponse() {
+  async dispose() {
     try {
       this.removeEventListener()
-      await Module.disponsePlayer(this.playerId)
+      await Module.disposePlayer(this.playerId)
     } catch (err) {}
   }
 

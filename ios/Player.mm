@@ -47,7 +47,7 @@
     return self;
 }
 
-- (void)disponse {
+- (void)dispose {
     if(_player != nil) {
         [_player pause];
         [_player removeObserver:self forKeyPath:@"rate"];
