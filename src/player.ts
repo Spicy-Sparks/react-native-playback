@@ -12,6 +12,7 @@ class Player {
   private playerId: string = ''
   private source: SourceType | null = null
   private volume: number = 1
+  private paused: boolean = false
   private loop: boolean = false
   private eventListeners: Record<string, Function[]> = {}
   private nativeEventSubscription: EmitterSubscription | null = null
@@ -67,6 +68,9 @@ class Player {
     if (!this.playerId || !data || !data.url) return
     const { autoplay, volume, ...source } = data
     this.source = source
+    if(typeof volume === 'number')
+      this.volume = volume
+    this.paused = !autoplay
     Module.setSource(this.playerId, data)
   }
 
@@ -76,12 +80,18 @@ class Player {
 
   play() {
     if (!this.playerId) return
+    this.paused = false
     Module.play(this.playerId)
   }
 
   pause() {
     if (!this.playerId) return
+    this.paused = true
     Module.pause(this.playerId)
+  }
+
+  getPaused() {
+    return this.paused
   }
 
   setVolume(volume: number) {
@@ -134,9 +144,11 @@ class Player {
         this.emit('stalled', eventData)
         return
       case 'ON_PLAY':
+        this.paused = false
         this.emit('play', eventData)
         return
       case 'ON_PAUSE':
+        this.paused = true
         this.emit('pause', eventData)
         return
       case 'ON_PROGRESS':
