@@ -92,6 +92,15 @@
         asset = [AVURLAsset URLAssetWithURL:url options:nil];
     }
     
+    if(_playerItem != nil) {
+        [_playerItem removeObserver:self forKeyPath:@"loadedTimeRanges"];
+        [_playerItem removeObserver:self forKeyPath:@"status"];
+        [_playerItem removeObserver:self forKeyPath:@"playbackBufferEmpty"];
+        [_playerItem removeObserver:self forKeyPath:@"playbackLikelyToKeepUp"];
+        [_playerItem removeObserver:self forKeyPath:@"timedMetadata"];
+        _playerItem = nil;
+    }
+    
     _playerItem = [AVPlayerItem playerItemWithAsset:asset];
     [_playerItem addObserver:self forKeyPath:@"loadedTimeRanges" options:NSKeyValueObservingOptionNew context:nil];
     [_playerItem addObserver:self forKeyPath:@"status" options:0 context:nil];
