@@ -207,10 +207,10 @@ public class Player {
   }
 
   public void setSource(ReadableMap source) {
-    if(this.player == null)
-      return;
-
     runOnUiThread(() -> {
+      if(this.player == null)
+        return;
+
       MediaItem mediaItem = MediaItem.fromUri(source.getString("url"));
       this.player.setMediaItem(mediaItem);
       this.player.prepare();
