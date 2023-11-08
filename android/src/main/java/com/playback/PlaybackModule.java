@@ -1,6 +1,8 @@
 package com.playback;
 
 import androidx.annotation.NonNull;
+
+import com.facebook.react.bridge.LifecycleEventListener;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
@@ -11,12 +13,27 @@ import java.util.HashMap;
 import java.util.Map;
 
 @ReactModule(name = PlaybackModule.NAME)
-public class PlaybackModule extends ReactContextBaseJavaModule {
+public class PlaybackModule extends ReactContextBaseJavaModule implements LifecycleEventListener {
   public static final String NAME = "Playback";
   public static Map<String, Player> players = new HashMap<>();
 
+  @Override
+  public void onHostResume() {}
+
+  @Override
+  public void onHostPause() {}
+
+  @Override
+  public void onHostDestroy() {
+    for(Map.Entry<String, Player> entry : players.entrySet()) {
+      Player player = entry.getValue();
+      player.dispose();
+    }
+  }
+
   public PlaybackModule(ReactApplicationContext reactContext) {
     super(reactContext);
+    reactContext.addLifecycleEventListener(this);
   }
 
   @Override

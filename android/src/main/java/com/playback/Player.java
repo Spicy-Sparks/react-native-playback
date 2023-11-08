@@ -1,6 +1,5 @@
 package com.playback;
 
-import android.content.Context;
 import android.os.Handler;
 
 import androidx.annotation.NonNull;
@@ -11,13 +10,13 @@ import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
-import com.facebook.react.uimanager.ThemedReactContext;
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.MediaMetadata;
 import com.google.android.exoplayer2.PlaybackException;
 import com.google.android.exoplayer2.Timeline;
 import com.google.android.exoplayer2.ui.PlayerView;
+import com.google.android.exoplayer2.DefaultRenderersFactory;
 
 import static com.facebook.react.bridge.UiThreadUtil.runOnUiThread;
 
@@ -40,7 +39,7 @@ public class Player {
 
     runOnUiThread(() -> {
       this.playerId = playerId;
-      this.player = new ExoPlayer.Builder(reactContext).build();
+      this.player = new ExoPlayer.Builder(reactContext) .setRenderersFactory(new DefaultRenderersFactory(reactContext).setEnableDecoderFallback(true)).build();
 
       this.progressRunnable = new Runnable() {
         private void sendEvent(@Nullable WritableMap params) {
