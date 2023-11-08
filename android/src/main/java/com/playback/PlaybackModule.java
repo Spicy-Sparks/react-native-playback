@@ -100,7 +100,7 @@ public class PlaybackModule extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
-  public void setVolume(String playerId, ReadableMap seek, Promise promise) {
+  public void seek(String playerId, ReadableMap seek, Promise promise) {
     var player = players.get(playerId);
     if(player == null) {
       promise.reject("E_PLAYER_NOT_FOUND", "playerId is invalid");
