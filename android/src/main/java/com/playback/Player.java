@@ -186,12 +186,14 @@ public class Player {
   }
 
   public void dispose() {
-    if(this.player != null) {
-      this.player.release();
-      if(this.eventsListener != null)
-        this.player.removeListener(this.eventsListener);
-      this.player = null;
-    }
+    runOnUiThread(() -> {
+      if(this.player != null) {
+        this.player.release();
+        if(this.eventsListener != null)
+          this.player.removeListener(this.eventsListener);
+        this.player = null;
+      }
+    });
     progressHandler.removeCallbacks(progressRunnable);
     this.paused = false;
     this.loop = false;
@@ -224,9 +226,11 @@ public class Player {
 
   public void play() {
     this.paused = false;
-    if(this.player == null)
-      return;
-    this.player.play();
+    runOnUiThread(() -> {
+      if(this.player == null)
+        return;
+      this.player.play();
+    });
   }
 
   public void pause() {
