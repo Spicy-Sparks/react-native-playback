@@ -56,8 +56,8 @@ public class Player {
               WritableMap params = Arguments.createMap();
               params.putString("eventType", "ON_PROGRESS");
               params.putString("playerId", playerId);
-              params.putDouble("currentTime", player.getCurrentPosition());
-              params.putDouble("duration", player.getDuration());
+              params.putDouble("currentTime", player.getCurrentPosition() / 1000);
+              params.putDouble("duration", player.getDuration() / 1000);
               sendEvent(params);
               progressHandler.postDelayed(this, 500);
             }
@@ -103,8 +103,8 @@ public class Player {
                 WritableMap params = Arguments.createMap();
                 params.putString("eventType", "ON_LOAD");
                 params.putString("playerId", playerId);
-                params.putDouble("duration", player.getDuration());
-                params.putDouble("currentTime", player.getCurrentPosition());
+                params.putDouble("duration", player.getDuration() / 1000);
+                params.putDouble("currentTime", player.getCurrentPosition() / 1000);
                 params.putBoolean("canPlayReverse", true);
                 params.putBoolean("canPlayFastForward", true);
                 params.putBoolean("canPlaySlowForward", true);
@@ -178,8 +178,8 @@ public class Player {
           WritableMap params = Arguments.createMap();
           params.putString("eventType", "ON_SEEK");
           params.putString("playerId", playerId);
-          params.putDouble("seekTime", (double) newPosition.positionMs / 100);
-          params.putDouble("seekTime", (double) newPosition.positionMs / 100);
+          params.putDouble("seekTime", (double) newPosition.positionMs / 1000);
+          params.putDouble("seekTime", (double) newPosition.positionMs / 1000);
           sendEvent(params);
         }
       };
