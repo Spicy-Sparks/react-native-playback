@@ -175,6 +175,8 @@ public class Player {
         @Override
         public void onPositionDiscontinuity(@NonNull com.google.android.exoplayer2.Player.PositionInfo oldPosition, @NonNull com.google.android.exoplayer2.Player.PositionInfo newPosition, int reason) {
           com.google.android.exoplayer2.Player.Listener.super.onPositionDiscontinuity(oldPosition, newPosition, reason);
+          if(oldPosition.positionMs <= 0 && newPosition.positionMs <= 0)
+            return;
           WritableMap params = Arguments.createMap();
           params.putString("eventType", "ON_SEEK");
           params.putString("playerId", playerId);
