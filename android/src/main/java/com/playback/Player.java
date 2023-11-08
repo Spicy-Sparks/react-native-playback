@@ -147,24 +147,28 @@ public class Player {
         }
 
         @Override
-        public void onPlayerError(@NonNull PlaybackException error) {
+        public void onPlayerError(PlaybackException error) {
           com.google.android.exoplayer2.Player.Listener.super.onPlayerError(error);
           WritableMap params = Arguments.createMap();
           params.putString("eventType", "ON_ERROR");
           params.putString("playerId", playerId);
-          params.putInt("errorCode", error.errorCode);
-          params.putString("errorMessage", error.getMessage());
+          if(error != null) {
+            params.putInt("errorCode", error.errorCode);
+            params.putString("errorMessage", error.getMessage());
+          }
           sendEvent(params);
         }
 
         @Override
-        public void onPlayerErrorChanged(@Nullable PlaybackException error) {
+        public void onPlayerErrorChanged(PlaybackException error) {
           com.google.android.exoplayer2.Player.Listener.super.onPlayerErrorChanged(error);
           WritableMap params = Arguments.createMap();
           params.putString("eventType", "ON_ERROR");
           params.putString("playerId", playerId);
-          params.putInt("errorCode", error.errorCode);
-          params.putString("errorMessage", error.getMessage());
+          if(error != null) {
+            params.putInt("errorCode", error.errorCode);
+            params.putString("errorMessage", error.getMessage());
+          }
           sendEvent(params);
         }
 
