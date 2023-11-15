@@ -12,9 +12,11 @@
 @property (nonatomic, assign, readonly) BOOL disposed;
 @property (nonatomic, assign, readonly) BOOL loop;
 @property (nonatomic, assign, readonly) BOOL paused;
+@property (nonatomic, assign, readonly) BOOL playerObserversRegistered;
+@property (nonatomic, assign, readonly) BOOL notficationCenterObserversRegistered;
+@property (nonatomic, assign, readonly) BOOL playerItemObserversRegistered;
 @property (nonatomic, strong, readonly) NSNumber *volume;
 @property (nonatomic, strong) id timeObserver;
-@property (nonatomic, strong) dispatch_queue_t observersQueue;
 
 - (instancetype)initWithEventEmitterAndId:(RCTEventEmitter *)eventEmitter playerId:(NSString *)playerId;
 - (void)setSource:(NSDictionary *)source;

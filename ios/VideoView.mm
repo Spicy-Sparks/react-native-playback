@@ -14,20 +14,30 @@
     
     if(self) {
         _playerViewController = [[VideoViewController alloc] init];
-        _playerViewController.updatesNowPlayingInfoCenter = NO;
+        _notificationCenterObserversRegistered = false;
+        _playerViewController.updatesNowPlayingInfoCenter = false;
+        _playerViewController.allowsPictureInPicturePlayback = false;
+        if (@available(iOS 16.0, *)) {
+            _playerViewController.allowsVideoFrameAnalysis = false;
+        }
         _playerViewController.view.frame = self.bounds;
         
-        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidEnterBackground:) name:UIApplicationDidEnterBackgroundNotification object:nil];
-            
-        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationWillEnterForeground:) name:UIApplicationWillEnterForegroundNotification object:nil];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidEnterBackground:) name:UIApplicationDidEnterBackgroundNotification object:nil];
+            [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationWillEnterForeground:) name:UIApplicationWillEnterForegroundNotification object:nil];
+            self->_notificationCenterObserversRegistered = true;
+        });
     }
     
     return self;
 }
 
 - (void)dealloc {
-    [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidEnterBackgroundNotification object:nil];
-    [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationWillEnterForegroundNotification object:nil];
+    if (_notificationCenterObserversRegistered) {
+        [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidEnterBackgroundNotification object:nil];
+        [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationWillEnterForegroundNotification object:nil];
+        _notificationCenterObserversRegistered = false;
+    }
 }
 
 - (void)setPlayerId:(NSString *)playerId {
@@ -40,7 +50,7 @@
     _playerViewController.player = _player.player;
     
     UIViewController *viewController = nil;
-    UIView *nextResponder = self;
+    UIResponder *nextResponder = self;
     while (nextResponder != nil) {
         nextResponder = [nextResponder nextResponder];
         if ([nextResponder isKindOfClass:[UIViewController class]]) {

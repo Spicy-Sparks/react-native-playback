@@ -8,18 +8,21 @@
     self = [super init];
     if (self) {
         _disposed = false;
+        _playerObserversRegistered = false;
+        _notficationCenterObserversRegistered = false;
+        _playerItemObserversRegistered = false;
         _eventEmitter = eventEmitter;
         _playerId = playerId;
         _player = [[AVPlayer alloc] init];
         _player.allowsExternalPlayback = true;
-        _observersQueue = dispatch_queue_create("com.reactnative.playback", DISPATCH_QUEUE_SERIAL);
         
         [self configureAudio];
         
-        dispatch_sync(_observersQueue, ^{
+        dispatch_async(dispatch_get_main_queue(), ^{
             __weak __typeof(self) weakSelf = self;
             
             [self->_player addObserver:self forKeyPath:@"rate" options:0 context:nil];
+            self->_playerObserversRegistered = true;
             
             if(self->_timeObserver != nil)
                 [self->_player removeTimeObserver:self->_timeObserver];
@@ -34,17 +37,21 @@
                     }];
                 }
             }];
-            
-            [[NSNotificationCenter defaultCenter] removeObserver:self];
-            
-            [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(playerItemDidReachEnd:) name:AVPlayerItemDidPlayToEndTimeNotification object:[self->_player currentItem]];
-            
-            [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(playbackStalled:) name:AVPlayerItemPlaybackStalledNotification object:nil];
-            
-            [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(didFailToFinishPlaying:) name: AVPlayerItemFailedToPlayToEndTimeNotification object:nil];
-            
-            [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(audioRouteChanged:) name:AVAudioSessionRouteChangeNotification object:nil];
         });
+        
+        if (_notficationCenterObserversRegistered) {
+            [[NSNotificationCenter defaultCenter] removeObserver:self];
+            _notficationCenterObserversRegistered = false;
+        }
+        
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(playerItemDidReachEnd:) name:AVPlayerItemDidPlayToEndTimeNotification object:[self->_player currentItem]];
+            [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(playbackStalled:) name:AVPlayerItemPlaybackStalledNotification object:nil];
+            [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(didFailToFinishPlaying:) name: AVPlayerItemFailedToPlayToEndTimeNotification object:nil];
+            [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(audioRouteChanged:) name:AVAudioSessionRouteChangeNotification object:nil];
+            self->_notficationCenterObserversRegistered = true;
+        });
+        
     }
     return self;
 }
@@ -55,33 +62,38 @@
     
     _disposed = true;
     
-    dispatch_sync(_observersQueue, ^{
-        if(self->_player != nil) {
-            [self->_player removeObserver:self forKeyPath:@"rate"];
-        }
+    if(self->_player != nil && _playerObserversRegistered) {
+        [self->_player removeObserver:self forKeyPath:@"rate"];
+        _playerObserversRegistered = false;
+    }
 
+    if (_notficationCenterObserversRegistered) {
         [[NSNotificationCenter defaultCenter] removeObserver:self];
+        _notficationCenterObserversRegistered = false;
+    }
 
-        if(self->_timeObserver != nil) {
-            [self->_player removeTimeObserver:self->_timeObserver];
-            self->_timeObserver = nil;
-        }
+    if(self->_timeObserver != nil) {
+        [self->_player removeTimeObserver:self->_timeObserver];
+        self->_timeObserver = nil;
+    }
 
-        if(self->_playerItem != nil) {
-            [self->_playerItem removeObserver:self forKeyPath:@"loadedTimeRanges"];
-            [self->_playerItem removeObserver:self forKeyPath:@"status"];
-            [self->_playerItem removeObserver:self forKeyPath:@"playbackBufferEmpty"];
-            [self->_playerItem removeObserver:self forKeyPath:@"playbackLikelyToKeepUp"];
-            [self->_playerItem removeObserver:self forKeyPath:@"timedMetadata"];
-            self->_playerItem = nil;
-        }
+    if(self->_playerItem != nil && _playerItemObserversRegistered) {
+        [self->_playerItem removeObserver:self forKeyPath:@"loadedTimeRanges"];
+        [self->_playerItem removeObserver:self forKeyPath:@"status"];
+        [self->_playerItem removeObserver:self forKeyPath:@"playbackBufferEmpty"];
+        [self->_playerItem removeObserver:self forKeyPath:@"playbackLikelyToKeepUp"];
+        [self->_playerItem removeObserver:self forKeyPath:@"timedMetadata"];
+        self->_playerItem = nil;
+        _playerItemObserversRegistered = false;
+    }
 
-        if(self->_player != nil) {
-            [self->_player pause];
+    if(self->_player != nil) {
+        [self->_player pause];
+        dispatch_async(dispatch_get_main_queue(), ^{
             [self->_player replaceCurrentItemWithPlayerItem:nil];
             self->_player = nil;
-        }
-    });
+        });
+    }
     
     _paused = false;
     _loop = false;
@@ -89,63 +101,70 @@
 }
 
 - (void)setSource:(NSDictionary *)source {
-    _source = source;
     
-    NSMutableDictionary *headers = [NSMutableDictionary dictionary];
+        _source = source;
+        
+        NSMutableDictionary *headers = [NSMutableDictionary dictionary];
+        
+        if ([source[@"headers"] isKindOfClass:[NSDictionary class]]) {
+            [headers addEntriesFromDictionary:source[@"headers"]];
+        }
+        
+        NSString *urlString = source[@"url"];
+        NSURL *url;
+        AVURLAsset *asset;
+        
+        if ([urlString hasPrefix:@"http://"] || [urlString hasPrefix:@"https://"]) {
+            url = [NSURL URLWithString:urlString];
+            asset = [AVURLAsset URLAssetWithURL:url options:@{@"AVURLAssetHTTPHeaderFieldsKey": headers}];
+        } else {
+            url = [NSURL fileURLWithPath:urlString];
+            asset = [AVURLAsset URLAssetWithURL:url options:nil];
+        }
     
-    if ([source[@"headers"] isKindOfClass:[NSDictionary class]]) {
-        [headers addEntriesFromDictionary:source[@"headers"]];
-    }
-    
-    NSString *urlString = source[@"url"];
-    NSURL *url;
-    AVURLAsset *asset;
+        if(_playerItem != nil && _playerItemObserversRegistered) {
+            [_playerItem removeObserver:self forKeyPath:@"loadedTimeRanges"];
+            [_playerItem removeObserver:self forKeyPath:@"status"];
+            [_playerItem removeObserver:self forKeyPath:@"playbackBufferEmpty"];
+            [_playerItem removeObserver:self forKeyPath:@"playbackLikelyToKeepUp"];
+            [_playerItem removeObserver:self forKeyPath:@"timedMetadata"];
+            _playerItem = nil;
+            _playerItemObserversRegistered = false;
+        }
 
-    if ([urlString hasPrefix:@"http://"] || [urlString hasPrefix:@"https://"]) {
-        url = [NSURL URLWithString:urlString];
-        asset = [AVURLAsset URLAssetWithURL:url options:@{@"AVURLAssetHTTPHeaderFieldsKey": headers}];
-    } else {
-        url = [NSURL fileURLWithPath:urlString];
-        asset = [AVURLAsset URLAssetWithURL:url options:nil];
-    }
-    
-    if(_playerItem != nil) {
-        [_playerItem removeObserver:self forKeyPath:@"loadedTimeRanges"];
-        [_playerItem removeObserver:self forKeyPath:@"status"];
-        [_playerItem removeObserver:self forKeyPath:@"playbackBufferEmpty"];
-        [_playerItem removeObserver:self forKeyPath:@"playbackLikelyToKeepUp"];
-        [_playerItem removeObserver:self forKeyPath:@"timedMetadata"];
-        _playerItem = nil;
-    }
-    
-    _playerItem = [AVPlayerItem playerItemWithAsset:asset];
-    [_playerItem addObserver:self forKeyPath:@"loadedTimeRanges" options:NSKeyValueObservingOptionNew context:nil];
-    [_playerItem addObserver:self forKeyPath:@"status" options:0 context:nil];
-    [_playerItem addObserver:self forKeyPath:@"playbackBufferEmpty" options:0 context:nil];
-    [_playerItem addObserver:self forKeyPath:@"playbackLikelyToKeepUp" options:0 context:nil];
-    [_playerItem addObserver:self forKeyPath:@"timedMetadata" options:NSKeyValueObservingOptionNew context:nil];
-    
-    AVAudioSession *audioSession = [AVAudioSession sharedInstance];
-    [audioSession setCategory:AVAudioSessionCategoryPlayback error:nil];
-    [audioSession setActive:YES error:nil];
-    
-    [_player replaceCurrentItemWithPlayerItem:_playerItem];
-    
-    id autoplay = [source objectForKey:@"autoplay"];
-    if(autoplay && [autoplay boolValue]) {
-        _paused = false;
-        [_player play];
-    }
-    else {
-        _paused = true;
-        [_player pause];
-    }
-    
-    id volume = [source objectForKey:@"volume"];
-    if(volume && [volume isKindOfClass:[NSNumber class]]) {
-        _volume = volume;
-        [_player setVolume:[volume floatValue]];
-    }
+        dispatch_async(dispatch_get_main_queue(), ^{
+            self->_playerItem = [AVPlayerItem playerItemWithAsset:asset];
+            [self->_playerItem addObserver:self forKeyPath:@"loadedTimeRanges" options:NSKeyValueObservingOptionNew context:nil];
+            [self->_playerItem addObserver:self forKeyPath:@"status" options:0 context:nil];
+            [self->_playerItem addObserver:self forKeyPath:@"playbackBufferEmpty" options:0 context:nil];
+            [self->_playerItem addObserver:self forKeyPath:@"playbackLikelyToKeepUp" options:0 context:nil];
+            [self->_playerItem addObserver:self forKeyPath:@"timedMetadata" options:NSKeyValueObservingOptionNew context:nil];
+            self->_playerItemObserversRegistered = true;
+        });
+        
+        AVAudioSession *audioSession = [AVAudioSession sharedInstance];
+        [audioSession setCategory:AVAudioSessionCategoryPlayback error:nil];
+        [audioSession setActive:YES error:nil];
+        
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self->_player replaceCurrentItemWithPlayerItem:self->_playerItem];
+        });
+        
+        id autoplay = [source objectForKey:@"autoplay"];
+        if(autoplay && [autoplay boolValue]) {
+            _paused = false;
+            [_player play];
+        }
+        else {
+            _paused = true;
+            [_player pause];
+        }
+        
+        id volume = [source objectForKey:@"volume"];
+        if(volume && [volume isKindOfClass:[NSNumber class]]) {
+            _volume = volume;
+            [_player setVolume:[volume floatValue]];
+        }
 }
 
 - (void)play {
@@ -189,7 +208,7 @@
     
       if (CMTimeCompare(current, cmSeekTime) != 0) {
           NSValue *seekTimeValue = [NSValue valueWithCMTime:cmSeekTime];
-          NSValue *toleranceValue = [NSValue valueWithCMTime:cmTolerance];
+//          NSValue *toleranceValue = [NSValue valueWithCMTime:cmTolerance];
           
           [_player seekToTime:cmSeekTime toleranceBefore:cmTolerance toleranceAfter:cmTolerance completionHandler:^(BOOL finished) {
               if(self->_eventEmitter != nil) {
