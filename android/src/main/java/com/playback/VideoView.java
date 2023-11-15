@@ -28,6 +28,7 @@ public class VideoView extends PlayerView {
   public VideoView(Context context) {
     super(context);
     this.context = context;
+    setUseController(false);
   }
 
   public void setPlayerId (String playerId) {
@@ -38,6 +39,7 @@ public class VideoView extends PlayerView {
     runOnUiThread(() -> {
       if(player.player == null)
         return;
+      setUseController(false);
       setPlayer(player.player);
     });
   }
