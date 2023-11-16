@@ -10,7 +10,7 @@
         _disposed = false;
         _playerObserversRegistered = false;
         _notficationCenterObserversRegistered = false;
-        _playerItemObserversRegistered = false;
+        _currentItemObserversRegistered = false;
         _eventEmitter = eventEmitter;
         _playerId = playerId;
         _player = [[AVPlayer alloc] init];
@@ -18,91 +18,91 @@
         
         [self configureAudio];
         
-        dispatch_async(dispatch_get_main_queue(), ^{
-            __weak __typeof(self) weakSelf = self;
-            
-            [self->_player addObserver:self forKeyPath:@"rate" options:0 context:nil];
-            self->_playerObserversRegistered = true;
-            
-            if(self->_timeObserver != nil)
-                [self->_player removeTimeObserver:self->_timeObserver];
-            self->_timeObserver = [self->_player addPeriodicTimeObserverForInterval:CMTimeMake(1, 1) queue:dispatch_get_main_queue() usingBlock:^(CMTime time) {
-                __typeof(self) strongSelf = weakSelf;
-                if (strongSelf && strongSelf->_eventEmitter != nil) {
-                    [strongSelf->_eventEmitter sendEventWithName:@"playerEvent" body:@{
-                        @"playerId": strongSelf->_playerId,
-                        @"eventType": @"ON_PROGRESS",
-                        @"currentTime": [NSNumber numberWithFloat:CMTimeGetSeconds(time)],
-                        @"duration": [NSNumber numberWithFloat:CMTimeGetSeconds(strongSelf->_playerItem.duration)],
-                    }];
-                }
-            }];
-        });
+        __weak __typeof(self) weakSelf = self;
         
-        if (_notficationCenterObserversRegistered) {
+        [self->_player addObserver:self forKeyPath:@"rate" options:0 context:nil];
+        self->_playerObserversRegistered = true;
+        
+        if(self->_timeObserver != nil)
+            [self->_player removeTimeObserver:self->_timeObserver];
+        self->_timeObserver = [self->_player addPeriodicTimeObserverForInterval:CMTimeMake(1, 1) queue:dispatch_get_global_queue(QOS_CLASS_DEFAULT, 0) usingBlock:^(CMTime time) {
+            __typeof(self) strongSelf = weakSelf;
+            if (strongSelf && strongSelf->_eventEmitter != nil) {
+                [strongSelf->_eventEmitter sendEventWithName:@"playerEvent" body:@{
+                    @"playerId": strongSelf->_playerId,
+                    @"eventType": @"ON_PROGRESS",
+                    @"currentTime": [NSNumber numberWithFloat:CMTimeGetSeconds(time)],
+                    @"duration": [NSNumber numberWithFloat:CMTimeGetSeconds(strongSelf->_player.currentItem.duration)],
+                }];
+            }
+        }];
+
+        if (self->_notficationCenterObserversRegistered) {
             [[NSNotificationCenter defaultCenter] removeObserver:self];
-            _notficationCenterObserversRegistered = false;
+            self->_notficationCenterObserversRegistered = false;
         }
-        
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(playerItemDidReachEnd:) name:AVPlayerItemDidPlayToEndTimeNotification object:[self->_player currentItem]];
-            [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(playbackStalled:) name:AVPlayerItemPlaybackStalledNotification object:nil];
-            [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(didFailToFinishPlaying:) name: AVPlayerItemFailedToPlayToEndTimeNotification object:nil];
-            [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(audioRouteChanged:) name:AVAudioSessionRouteChangeNotification object:nil];
-            self->_notficationCenterObserversRegistered = true;
-        });
-        
+    
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(playerItemDidReachEnd:) name:AVPlayerItemDidPlayToEndTimeNotification object:[self->_player currentItem]];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(playbackStalled:) name:AVPlayerItemPlaybackStalledNotification object:nil];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(didFailToFinishPlaying:) name: AVPlayerItemFailedToPlayToEndTimeNotification object:nil];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(audioRouteChanged:) name:AVAudioSessionRouteChangeNotification object:nil];
+        self->_notficationCenterObserversRegistered = true;
     }
     return self;
 }
 
 - (void)dispose {
-    if(_disposed)
-        return;
     
-    _disposed = true;
-    
-    if(self->_player != nil && _playerObserversRegistered) {
-        [self->_player removeObserver:self forKeyPath:@"rate"];
-        _playerObserversRegistered = false;
-    }
-
-    if (_notficationCenterObserversRegistered) {
-        [[NSNotificationCenter defaultCenter] removeObserver:self];
-        _notficationCenterObserversRegistered = false;
-    }
-
-    if(self->_timeObserver != nil) {
-        [self->_player removeTimeObserver:self->_timeObserver];
-        self->_timeObserver = nil;
-    }
-
-    if(self->_playerItem != nil && _playerItemObserversRegistered) {
-        [self->_playerItem removeObserver:self forKeyPath:@"loadedTimeRanges"];
-        [self->_playerItem removeObserver:self forKeyPath:@"status"];
-        [self->_playerItem removeObserver:self forKeyPath:@"playbackBufferEmpty"];
-        [self->_playerItem removeObserver:self forKeyPath:@"playbackLikelyToKeepUp"];
-        [self->_playerItem removeObserver:self forKeyPath:@"timedMetadata"];
-        self->_playerItem = nil;
-        _playerItemObserversRegistered = false;
-    }
-
-    if(self->_player != nil) {
-        [self->_player pause];
-        dispatch_async(dispatch_get_main_queue(), ^{
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_DEFAULT, 0), ^{
+        
+        if(self->_disposed)
+            return;
+        
+        self->_disposed = true;
+        
+        if(self->_player != nil && self->_playerObserversRegistered) {
+            [self->_player removeObserver:self forKeyPath:@"rate"];
+            self->_playerObserversRegistered = false;
+        }
+        
+        if (self->_notficationCenterObserversRegistered) {
+            [[NSNotificationCenter defaultCenter] removeObserver:self];
+            self->_notficationCenterObserversRegistered = false;
+        }
+        
+        if(self->_timeObserver != nil) {
+            [self->_player removeTimeObserver:self->_timeObserver];
+            self->_timeObserver = nil;
+        }
+        
+        if(self->_player.currentItem != nil && self->_currentItemObserversRegistered) {
+            [self->_player.currentItem removeObserver:self forKeyPath:@"loadedTimeRanges"];
+            [self->_player.currentItem removeObserver:self forKeyPath:@"status"];
+            [self->_player.currentItem removeObserver:self forKeyPath:@"playbackBufferEmpty"];
+            [self->_player.currentItem removeObserver:self forKeyPath:@"playbackLikelyToKeepUp"];
+            [self->_player.currentItem removeObserver:self forKeyPath:@"timedMetadata"];
+            self->_currentItemObserversRegistered = false;
+        }
+        
+        if(self->_player != nil) {
+            [self->_player pause];
             [self->_player replaceCurrentItemWithPlayerItem:nil];
             self->_player = nil;
-        });
-    }
-    
-    _paused = false;
-    _loop = false;
-    _source = nil;
+        }
+        
+        self->_paused = false;
+        self->_loop = false;
+        self->_source = nil;
+    });
 }
 
 - (void)setSource:(NSDictionary *)source {
     
-        _source = source;
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_DEFAULT, 0), ^{
+        
+        __weak __typeof(self) weakSelf = self;
+
+        self->_source = source;
         
         NSMutableDictionary *headers = [NSMutableDictionary dictionary];
         
@@ -121,50 +121,51 @@
             url = [NSURL fileURLWithPath:urlString];
             asset = [AVURLAsset URLAssetWithURL:url options:nil];
         }
-    
-        if(_playerItem != nil && _playerItemObserversRegistered) {
-            [_playerItem removeObserver:self forKeyPath:@"loadedTimeRanges"];
-            [_playerItem removeObserver:self forKeyPath:@"status"];
-            [_playerItem removeObserver:self forKeyPath:@"playbackBufferEmpty"];
-            [_playerItem removeObserver:self forKeyPath:@"playbackLikelyToKeepUp"];
-            [_playerItem removeObserver:self forKeyPath:@"timedMetadata"];
-            _playerItem = nil;
-            _playerItemObserversRegistered = false;
+        
+        if(self->_player.currentItem != nil && self->_currentItemObserversRegistered) {
+            [self->_player.currentItem removeObserver:self forKeyPath:@"loadedTimeRanges"];
+            [self->_player.currentItem removeObserver:self forKeyPath:@"status"];
+            [self->_player.currentItem removeObserver:self forKeyPath:@"playbackBufferEmpty"];
+            [self->_player.currentItem removeObserver:self forKeyPath:@"playbackLikelyToKeepUp"];
+            [self->_player.currentItem removeObserver:self forKeyPath:@"timedMetadata"];
+            self->_currentItemObserversRegistered = false;
         }
-
-        dispatch_async(dispatch_get_main_queue(), ^{
-            self->_playerItem = [AVPlayerItem playerItemWithAsset:asset];
-            [self->_playerItem addObserver:self forKeyPath:@"loadedTimeRanges" options:NSKeyValueObservingOptionNew context:nil];
-            [self->_playerItem addObserver:self forKeyPath:@"status" options:0 context:nil];
-            [self->_playerItem addObserver:self forKeyPath:@"playbackBufferEmpty" options:0 context:nil];
-            [self->_playerItem addObserver:self forKeyPath:@"playbackLikelyToKeepUp" options:0 context:nil];
-            [self->_playerItem addObserver:self forKeyPath:@"timedMetadata" options:NSKeyValueObservingOptionNew context:nil];
-            self->_playerItemObserversRegistered = true;
-        });
+        
+        AVPlayerItem *item = [AVPlayerItem playerItemWithAsset:asset];
+        if (item) {
+            [item addObserver:self forKeyPath:@"loadedTimeRanges" options:NSKeyValueObservingOptionNew context:nil];
+            [item addObserver:self forKeyPath:@"status" options:0 context:nil];
+            [item addObserver:self forKeyPath:@"playbackBufferEmpty" options:0 context:nil];
+            [item addObserver:self forKeyPath:@"playbackLikelyToKeepUp" options:0 context:nil];
+            [item addObserver:self forKeyPath:@"timedMetadata" options:NSKeyValueObservingOptionNew context:nil];
+            self->_currentItemObserversRegistered = true;
+        } else {
+            [self->_player replaceCurrentItemWithPlayerItem:nil];
+            return;
+        }
         
         AVAudioSession *audioSession = [AVAudioSession sharedInstance];
         [audioSession setCategory:AVAudioSessionCategoryPlayback error:nil];
         [audioSession setActive:YES error:nil];
-        
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [self->_player replaceCurrentItemWithPlayerItem:self->_playerItem];
-        });
+
+        [self->_player replaceCurrentItemWithPlayerItem:item];
         
         id autoplay = [source objectForKey:@"autoplay"];
         if(autoplay && [autoplay boolValue]) {
-            _paused = false;
-            [_player play];
+            self->_paused = false;
+            [self->_player play];
         }
         else {
-            _paused = true;
-            [_player pause];
+            self->_paused = true;
+            [self->_player pause];
         }
         
         id volume = [source objectForKey:@"volume"];
         if(volume && [volume isKindOfClass:[NSNumber class]]) {
-            _volume = volume;
-            [_player setVolume:[volume floatValue]];
+            self->_volume = volume;
+            [self->_player setVolume:[volume floatValue]];
         }
+    });
 }
 
 - (void)play {
@@ -225,7 +226,7 @@
 }
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
-    if (object == self->_player || object == self->_playerItem) {
+    if (object == self->_player || object == self->_player.currentItem) {
         if([keyPath isEqualToString:@"rate"]) {
             if (self->_player.rate == 1.0) {
                 if(self->_eventEmitter != nil) {
@@ -244,8 +245,8 @@
             }
         }
         else if([keyPath isEqualToString:@"status"]) {
-            if (self->_playerItem.status == AVPlayerItemStatusReadyToPlay) {
-                float duration = CMTimeGetSeconds(self->_playerItem.asset.duration);
+            if (self->_player.currentItem.status == AVPlayerItemStatusReadyToPlay) {
+                float duration = CMTimeGetSeconds(self->_player.currentItem.asset.duration);
                 
                 if (isnan(duration)) {
                     duration = 0.0;
@@ -256,22 +257,22 @@
                         @"playerId": self->_playerId,
                         @"eventType": @"ON_LOAD",
                         @"duration": [NSNumber numberWithFloat:duration],
-                        @"currentTime": [NSNumber numberWithFloat:CMTimeGetSeconds(self->_playerItem.currentTime)],
-                        @"canPlayReverse": [NSNumber numberWithBool:self->_playerItem.canPlayReverse],
-                        @"canPlayFastForward": [NSNumber numberWithBool:self->_playerItem.canPlayFastForward],
-                        @"canPlaySlowForward": [NSNumber numberWithBool:self->_playerItem.canPlaySlowForward],
-                        @"canPlaySlowReverse": [NSNumber numberWithBool:self->_playerItem.canPlaySlowReverse],
-                        @"canStepBackward": [NSNumber numberWithBool:self->_playerItem.canStepBackward],
-                        @"canStepForward": [NSNumber numberWithBool:self->_playerItem.canStepForward]
+                        @"currentTime": [NSNumber numberWithFloat:CMTimeGetSeconds(self->_player.currentItem.currentTime)],
+                        @"canPlayReverse": [NSNumber numberWithBool:self->_player.currentItem.canPlayReverse],
+                        @"canPlayFastForward": [NSNumber numberWithBool:self->_player.currentItem.canPlayFastForward],
+                        @"canPlaySlowForward": [NSNumber numberWithBool:self->_player.currentItem.canPlaySlowForward],
+                        @"canPlaySlowReverse": [NSNumber numberWithBool:self->_player.currentItem.canPlaySlowReverse],
+                        @"canStepBackward": [NSNumber numberWithBool:self->_player.currentItem.canStepBackward],
+                        @"canStepForward": [NSNumber numberWithBool:self->_player.currentItem.canStepForward]
                     }];
                 }
-            } else if (self->_playerItem.status == AVPlayerItemStatusFailed) {
+            } else if (self->_player.currentItem.status == AVPlayerItemStatusFailed) {
                 if(self->_eventEmitter != nil) {
                     [self->_eventEmitter sendEventWithName:@"playerEvent" body:@{
                         @"playerId": self->_playerId,
                         @"eventType": @"ON_ERROR",
-                        @"errorCode": [NSNumber numberWithInteger: self->_playerItem.error.code],
-                        @"errorMessage": [self->_playerItem.error localizedDescription] == nil ? @"" : [self->_playerItem.error localizedDescription]
+                        @"errorCode": [NSNumber numberWithInteger: self->_player.currentItem.error.code],
+                        @"errorMessage": [self->_player.currentItem.error localizedDescription] == nil ? @"" : [self->_player.currentItem.error localizedDescription]
                     }];
                 }
             }
@@ -301,7 +302,7 @@
             }
         }
         else if([keyPath isEqualToString:@"loadedTimeRanges"]) {
-            NSArray *timeRanges = [self->_playerItem.loadedTimeRanges valueForKey:@"CMTimeRangeValue"];
+            NSArray *timeRanges = [self->_player.currentItem.loadedTimeRanges valueForKey:@"CMTimeRangeValue"];
             CMTimeRange timeRange = [timeRanges.firstObject CMTimeRangeValue];
             float bufferingProgress = CMTimeGetSeconds(timeRange.start) + CMTimeGetSeconds(timeRange.duration);
             if(self->_eventEmitter != nil) {

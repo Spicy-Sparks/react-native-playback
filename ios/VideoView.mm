@@ -22,21 +22,19 @@
         }
         _playerViewController.view.frame = self.bounds;
         
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidEnterBackground:) name:UIApplicationDidEnterBackgroundNotification object:nil];
-            [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationWillEnterForeground:) name:UIApplicationWillEnterForegroundNotification object:nil];
-            self->_notificationCenterObserversRegistered = true;
-        });
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidEnterBackground:) name:UIApplicationDidEnterBackgroundNotification object:nil];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationWillEnterForeground:) name:UIApplicationWillEnterForegroundNotification object:nil];
+        self->_notificationCenterObserversRegistered = true;
     }
     
     return self;
 }
 
 - (void)dealloc {
-    if (_notificationCenterObserversRegistered) {
+    if (self->_notificationCenterObserversRegistered) {
         [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidEnterBackgroundNotification object:nil];
         [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationWillEnterForegroundNotification object:nil];
-        _notificationCenterObserversRegistered = false;
+        self->_notificationCenterObserversRegistered = false;
     }
 }
 
