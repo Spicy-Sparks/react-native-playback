@@ -172,6 +172,7 @@
     if(_player == nil)
         return;
     [self configureAudio];
+    [self configureAudio];
     [_player play];
 }
 
@@ -209,6 +210,7 @@
       if (CMTimeCompare(current, cmSeekTime) != 0) {
           NSValue *seekTimeValue = [NSValue valueWithCMTime:cmSeekTime];
 //          NSValue *toleranceValue = [NSValue valueWithCMTime:cmTolerance];
+//          NSValue *toleranceValue = [NSValue valueWithCMTime:cmTolerance];
           
           [_player seekToTime:cmSeekTime toleranceBefore:cmTolerance toleranceAfter:cmTolerance completionHandler:^(BOOL finished) {
               if(self->_eventEmitter != nil) {
@@ -227,17 +229,17 @@
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
     if (object == _player || object == _player.currentItem) {
         if([keyPath isEqualToString:@"rate"]) {
-            if (_player.rate == 1.0) {
-                if(_eventEmitter != nil) {
-                    [_eventEmitter sendEventWithName:@"playerEvent" body:@{
-                        @"playerId": _playerId,
+            if (self->_player.rate == 1.0) {
+                if(self->_eventEmitter != nil) {
+                    [self->_eventEmitter sendEventWithName:@"playerEvent" body:@{
+                        @"playerId": self->_playerId,
                         @"eventType": @"ON_PLAY"
                     }];
                 }
-            } else if (_player.rate == 0.0) {
-                if(_eventEmitter != nil) {
-                    [_eventEmitter sendEventWithName:@"playerEvent" body:@{
-                        @"playerId": _playerId,
+            } else if (self->_player.rate == 0.0) {
+                if(self->_eventEmitter != nil) {
+                    [self->_eventEmitter sendEventWithName:@"playerEvent" body:@{
+                        @"playerId": self->_playerId,
                         @"eventType": @"ON_PAUSE"
                     }];
                 }
@@ -277,25 +279,25 @@
             }
         }
         else if([keyPath isEqualToString:@"timedMetadata"]) {
-            if(_eventEmitter != nil) {
-                [_eventEmitter sendEventWithName:@"playerEvent" body:@{
-                    @"playerId": _playerId,
+            if(self->_eventEmitter != nil) {
+                [self->_eventEmitter sendEventWithName:@"playerEvent" body:@{
+                    @"playerId": self->_playerId,
                     @"eventType": @"ON_TIMED_METADATA"
                 }];
             }
         }
         else if([keyPath isEqualToString:@"playbackBufferEmpty"]) {
-            if(_eventEmitter != nil) {
-                [_eventEmitter sendEventWithName:@"playerEvent" body:@{
-                    @"playerId": _playerId,
+            if(self->_eventEmitter != nil) {
+                [self->_eventEmitter sendEventWithName:@"playerEvent" body:@{
+                    @"playerId": self->_playerId,
                     @"eventType": @"ON_BUFFERING"
                 }];
             }
         }
         else if([keyPath isEqualToString:@"playbackLikelyToKeepUp"]) {
-            if(_eventEmitter != nil) {
-                [_eventEmitter sendEventWithName:@"playerEvent" body:@{
-                    @"playerId": _playerId,
+            if(self->_eventEmitter != nil) {
+                [self->_eventEmitter sendEventWithName:@"playerEvent" body:@{
+                    @"playerId": self->_playerId,
                     @"eventType": @"ON_BUFFERING"
                 }];
             }
@@ -304,9 +306,9 @@
             NSArray *timeRanges = [_player.currentItem.loadedTimeRanges valueForKey:@"CMTimeRangeValue"];
             CMTimeRange timeRange = [timeRanges.firstObject CMTimeRangeValue];
             float bufferingProgress = CMTimeGetSeconds(timeRange.start) + CMTimeGetSeconds(timeRange.duration);
-            if(_eventEmitter != nil) {
-                [_eventEmitter sendEventWithName:@"playerEvent" body:@{
-                    @"playerId": _playerId,
+            if(self->_eventEmitter != nil) {
+                [self->_eventEmitter sendEventWithName:@"playerEvent" body:@{
+                    @"playerId": self->_playerId,
                     @"eventType": @"ON_BUFFERING",
                     @"progress": [NSNumber numberWithFloat:bufferingProgress]
                 }];
@@ -361,6 +363,24 @@
             break;
         default:
             break;
+  }
+}
+
+- (void)configureAudio
+{
+    AVAudioSession *session = [AVAudioSession sharedInstance];
+    AVAudioSessionCategory category = AVAudioSessionCategoryPlayback;
+    AVAudioSessionCategoryOptions options = 0;
+
+    if(@available(iOS 13.0, *)) {
+        [session setCategory:category mode:AVAudioSessionModeDefault routeSharingPolicy:AVAudioSessionRouteSharingPolicyLongFormAudio options:options error:nil];
+    } else if(@available(iOS 11.0, *)) {
+        [session setCategory:category mode:AVAudioSessionModeDefault routeSharingPolicy:AVAudioSessionRouteSharingPolicyLongForm options:options error:nil];
+    } else {
+        [session setCategory:category withOptions:options error:nil];
+    }
+    [session setCategory:category error:nil];
+}
   }
 }
 

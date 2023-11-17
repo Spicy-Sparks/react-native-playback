@@ -12,6 +12,7 @@ class Player {
   private playerId: string = ''
   private source: SourceType | null = null
   private volume: number = 1
+  private paused: boolean = false
   private loop: boolean = false
   private eventListeners: Record<string, Function[]> = {}
   private nativeEventSubscription: EmitterSubscription | null = null
@@ -23,91 +24,109 @@ class Player {
       onCreated && onCreated()
     })()
   }
+  
+  private removeNativeEventSubscription() {
+    if (this.nativeEventSubscription) {
+      if(emitter.removeSubscription)
+        emitter.removeSubscription(this.nativeEventSubscription)
+      else
+        this.nativeEventSubscription.remove()
+    }
+  }
 
-  async mount() {
+  private async mount() {
     try {
       if(!this.playerId)
         this.playerId = this.generateId()
-      await Module.createPlayer(this.playerId)
       this.nativeEventSubscription = emitter.addListener(
         'playerEvent',
         (data) => this.onNativeEvent(this.playerId, data)
       )
+      await Module.createPlayer(this.playerId)
       this.emit('created')
     } catch (err) {
+      this.removeNativeEventSubscription()
       this.playerId = ''
     }
   }
 
-  async disponse() {
+  public async dispose() {
     try {
-      if (this.nativeEventSubscription)
-        emitter.removeSubscription(this.nativeEventSubscription)
-      await Module.disponsePlayer(this.playerId)
+      this.removeNativeEventSubscription()
+      await Module.disposePlayer(this.playerId)
     } catch (err) {}
   }
 
-  getId() {
+  public getId() {
     return this.playerId
   }
 
-  setSource(data: SourceType & {
+  public setSource(data: SourceType & {
     autoplay?: boolean,
     volume?: number,
   }) {
     if (!this.playerId || !data || !data.url) return
     const { autoplay, volume, ...source } = data
     this.source = source
+    if(typeof volume === 'number')
+      this.volume = volume
+    this.paused = !autoplay
     Module.setSource(this.playerId, data)
   }
 
-  getSource() {
+  public getSource() {
     return this.source
   }
 
-  play() {
+  public play() {
     if (!this.playerId) return
+    this.paused = false
     Module.play(this.playerId)
   }
 
-  pause() {
+  public pause() {
     if (!this.playerId) return
+    this.paused = true
     Module.pause(this.playerId)
   }
 
-  setVolume(volume: number) {
+  public getPaused() {
+    return this.paused
+  }
+
+  public setVolume(volume: number) {
     if (!this.playerId || typeof volume !== 'number') return
     this.volume = volume
     Module.setVolume(this.playerId, volume)
   }
 
-  getVolume() {
+  public getVolume() {
     return this.volume
   }
 
-  setLoop(loop: boolean) {
+  public setLoop(loop: boolean) {
     if (!this.playerId || typeof loop !== 'boolean') return
     this.loop = loop
     Module.setLoop(this.playerId, loop)
   }
 
-  getLoop() {
+  public getLoop() {
     return this.loop
   }
 
-  seek(time: { time: number, tolerance?: number }) {
+  public seek(time: { time: number, tolerance?: number }) {
     if (!this.playerId || !time || typeof time.time !== 'number') return
     Module.seek(this.playerId, time)
   }
 
-  generateId() {
+  private generateId() {
     return new Date().getTime().toString() + Math.floor(Math.random() * 100)
   }
 
-  onNativeEvent(thisPlayerId: string, data: any) {
+  private onNativeEvent(thisPlayerId: string, data: any) {
     if (!data) return
-    const { playerId, eventType, ...eventData } = data
-    if (!eventType || playerId !== thisPlayerId) return
+    const { eventType, ...eventData } = data
+    if (!eventType || eventData.playerId !== thisPlayerId) return
     switch (data.eventType) {
       case 'ON_LOAD':
         this.emit('load', eventData)
@@ -125,9 +144,11 @@ class Player {
         this.emit('stalled', eventData)
         return
       case 'ON_PLAY':
+        this.paused = false
         this.emit('play', eventData)
         return
       case 'ON_PAUSE':
+        this.paused = true
         this.emit('pause', eventData)
         return
       case 'ON_PROGRESS':
@@ -145,17 +166,21 @@ class Player {
     }
   }
 
-  on(eventType: string, callback: (eventData: any) => void) {
+  public on(eventType: string, callback: (eventData: any) => void) {
     if (!this.eventListeners[eventType]) this.eventListeners[eventType] = []
     this.eventListeners[eventType]!.push(callback)
   }
 
-  off(eventType: string, callback: (eventData: any) => void) {
+  public off(eventType: string, callback: (eventData: any) => void) {
     const listeners = this.eventListeners[eventType]
     if (listeners) {
       const index = listeners.indexOf(callback)
       if (index !== -1) listeners.splice(index, 1)
     }
+  }
+
+  public clearEvents() {
+    this.eventListeners = {}
   }
 
   private emit(eventType: string, eventData?: any) {

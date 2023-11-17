@@ -12,6 +12,7 @@ export default function App() {
 
       player.setSource({
         url: 'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+        autoplay: true,
         headers: {
           Host: 'google.com',
         },
@@ -20,9 +21,7 @@ export default function App() {
       player.on('load', (data) => console.log('ON LOAD', data));
       player.on('error', (data) => console.log('ON ERROR', data));
       player.on('buffering', (data) => console.log('ON BUFFERING', data));
-      player.on('timedMetadata', (data) =>
-        console.log('ON TIMED METADATA', data)
-      );
+      player.on('timedMetadata', (data) => console.log('ON TIMED METADATA', data));
       player.on('stalled', (data) => console.log('ON STALLED', data));
       player.on('play', (data) => console.log('ON PLAY', data));
       player.on('pause', (data) => console.log('ON PAUSE', data));

@@ -27,6 +27,9 @@ useEffect(() => {
       }
     })
 
+    player.pause()
+    player.play()
+
     player.on('load', (data) => console.log("ON LOAD", data))
     player.on('error', (data) => console.log("ON ERROR", data))
     player.on('buffering', (data) => console.log("ON BUFFERING", data))

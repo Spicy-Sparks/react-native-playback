@@ -26,7 +26,7 @@ RCT_EXPORT_METHOD(disposePlayer:(NSString *)playerId
         reject(@"E_PLAYER_NOT_FOUND", @"playerId is invalid", nil);
         return;
     }
-    [player disponse];
+    [player dispose];
     [players removeObjectForKey:playerId];
     resolve(nil);
 }

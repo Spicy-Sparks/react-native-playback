@@ -9,6 +9,7 @@
 @property (nonatomic, strong, readonly) AVPlayer *player;
 @property (nonatomic, strong, readonly) NSDictionary *source;
 @property (nonatomic, assign, readonly) BOOL disposed;
+@property (nonatomic, assign, readonly) BOOL disposed;
 @property (nonatomic, assign, readonly) BOOL loop;
 @property (nonatomic, assign, readonly) BOOL paused;
 @property (nonatomic, assign, readonly) BOOL playerObserversRegistered;
@@ -24,6 +25,7 @@
 - (void)seek:(NSDictionary *)seek;
 - (void)play;
 - (void)pause;
+- (void)dispose;
 - (void)dispose;
 
 @end

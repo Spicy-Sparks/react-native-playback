@@ -20,10 +20,17 @@
         if (@available(iOS 16.0, *)) {
             _playerViewController.allowsVideoFrameAnalysis = false;
         }
+        _notificationCenterObserversRegistered = false;
+        _playerViewController.updatesNowPlayingInfoCenter = false;
+        _playerViewController.allowsPictureInPicturePlayback = false;
+        if (@available(iOS 16.0, *)) {
+            _playerViewController.allowsVideoFrameAnalysis = false;
+        }
         _playerViewController.view.frame = self.bounds;
 
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidEnterBackground:) name:UIApplicationDidEnterBackgroundNotification object:nil];
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationWillEnterForeground:) name:UIApplicationWillEnterForegroundNotification object:nil];
+        self->_notificationCenterObserversRegistered = true;
         self->_notificationCenterObserversRegistered = true;
     }
     
@@ -48,6 +55,7 @@
     _playerViewController.player = _player.player;
     
     UIViewController *viewController = nil;
+    UIResponder *nextResponder = self;
     UIResponder *nextResponder = self;
     while (nextResponder != nil) {
         nextResponder = [nextResponder nextResponder];
