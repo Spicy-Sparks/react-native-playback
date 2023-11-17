@@ -7,10 +7,13 @@
 @property (nonatomic, strong, readonly) RCTEventEmitter *eventEmitter;
 @property (nonatomic, strong, readonly) NSString *playerId;
 @property (nonatomic, strong, readonly) AVPlayer *player;
-@property (nonatomic, strong, readonly) AVPlayerItem *playerItem;
 @property (nonatomic, strong, readonly) NSDictionary *source;
+@property (nonatomic, assign, readonly) BOOL disposed;
 @property (nonatomic, assign, readonly) BOOL loop;
 @property (nonatomic, assign, readonly) BOOL paused;
+@property (nonatomic, assign, readonly) BOOL playerObserversRegistered;
+@property (nonatomic, assign, readonly) BOOL notficationObserversRegistered;
+@property (nonatomic, assign, readonly) BOOL currentItemObserversRegistered;
 @property (nonatomic, strong, readonly) NSNumber *volume;
 @property (nonatomic, strong) id timeObserver;
 
@@ -21,6 +24,6 @@
 - (void)seek:(NSDictionary *)seek;
 - (void)play;
 - (void)pause;
-- (void)disponse;
+- (void)dispose;
 
 @end
