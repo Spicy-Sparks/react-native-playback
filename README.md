@@ -21,10 +21,7 @@ useEffect(() => {
     setPlayerId(player.getId())
 
     player.setSource({
-      url: 'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-      headers: {
-        'Host': 'google.com'
-      }
+      url: 'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
     })
 
     player.pause()
