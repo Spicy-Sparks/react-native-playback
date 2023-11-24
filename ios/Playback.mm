@@ -38,18 +38,4 @@ RCT_EXTERN_METHOD(seek:(NSString *)playerId
                   resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)
 
-+ (BOOL)requiresMainQueueSetup
-{
-  return NO;
-}
-
-+ (NSMutableDictionary *)players {
-    NSMutableDictionary *test = [[NSMutableDictionary alloc] init];
-    return test;
-}
-
-- (NSArray<NSString *> *)supportedEvents {
-    return @[@"playerEvent"];
-}
-
 @end

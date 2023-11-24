@@ -1,4 +1,5 @@
 import AVKit
+import Promises
 
 class Player: NSObject, PlayerObserverHandler {
     internal var player: AVPlayer?
@@ -15,92 +16,112 @@ class Player: NSObject, PlayerObserverHandler {
         self.playerId = playerId
         self.player = AVPlayer()
         super.init()
-
         self.disposed = false
-
         self.player?.allowsExternalPlayback = true
         self.player?.actionAtItemEnd = .none
-
         self.configureAudio()
-        
         playerObserver._handlers = self
     }
     
-    deinit { dispose() }
+    deinit {
+        dispose()
+    }
     
     func dispose() {
-        DispatchQueue.global(qos: .default).async {
-            
-            guard !self.disposed else { return }
-            
-            self.disposed = true
-            
-            if let player = self.player {
-                player.pause()
-                player.replaceCurrentItem(with: nil)
-                self.player = nil
+        let dispatchClosure = {
+            do {
+                self.delay()
+                    .then{ [weak self] in
+                        guard let self = self else { return }
+                
+                        guard !self.disposed else { return }
+                        
+                        self.disposed = true
+                        
+                        if let player = self.player {
+                            player.pause()
+                            player.replaceCurrentItem(with: nil)
+                            self.player = nil
+                        }
+                        
+                        NotificationCenter.default.removeObserver(self)
+                        self.playerObserver.clearPlayer()
+                        
+                        self.paused = false
+                        self.loop = false
+                    }.catch{ _ in }
             }
-            
-            NotificationCenter.default.removeObserver(self)
-            self.playerObserver.clearPlayer()
-            
-            self.paused = false
-            self.loop = false
+        }
+        DispatchQueue.global(qos: .default).async(execute: dispatchClosure)
+    }
+    
+    func delay(seconds: Int = 0) -> Promise<Void> {
+        return Promise<Void>(on: .global()) { fulfill, reject in
+            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + Double(Int64(seconds)) / Double(NSEC_PER_SEC), execute: {
+                fulfill(())
+            })
         }
     }
     
     func setSource(_ source: NSDictionary) {
-        DispatchQueue.global(qos: .default).async { [weak self] in
-            
-            self?.playerObserver.player = nil
-            self?.playerObserver.playerItem = nil
-            
-            guard let self = self else { return }
-            
-            var headers = [String: String]()
-            
-            if let sourceHeaders = source["headers"] as? [String: String] {
-                headers.merge(sourceHeaders) { (_, new) in new }
-            }
-            
-            if let urlString = source["url"] as? String {
-                let url: URL
-                let asset: AVURLAsset
-                
-                if urlString.hasPrefix("http://") || urlString.hasPrefix("https://") {
-                    url = URL(string: urlString)!
-                    asset = AVURLAsset(url: url, options: ["AVURLAssetHTTPHeaderFieldsKey": headers])
-                } else {
-                    url = URL(fileURLWithPath: urlString)
-                    asset = AVURLAsset(url: url)
-                }
-                
-                let item = AVPlayerItem(asset: asset)
+        let dispatchClosure = {
+            do {
+                self.delay()
+                    .then{ [weak self] in
+                        guard let self = self else { return }
+                        
+                        self.playerObserver.player = nil
+                        self.playerObserver.playerItem = nil
+                        
+                        var headers = [String: String]()
+                        
+                        if let sourceHeaders = source["headers"] as? [String: String] {
+                            headers.merge(sourceHeaders) { (_, new) in new }
+                        }
+                        
+                        if let urlString = source["url"] as? String {
+                            let url: URL
+                            let asset: AVURLAsset
+                            
+                            if urlString.hasPrefix("http://") || urlString.hasPrefix("https://") {
+                                url = URL(string: urlString)!
+                                asset = AVURLAsset(url: url, options: ["AVURLAssetHTTPHeaderFieldsKey": headers])
+                            } else {
+                                url = URL(fileURLWithPath: urlString)
+                                asset = AVURLAsset(url: url)
+                            }
+                            
+                            let item = AVPlayerItem(asset: asset)
+                            
+                            let audioSession = AVAudioSession.sharedInstance()
+                            try? audioSession.setCategory(.playback)
+                            try? audioSession.setActive(true)
+                            
+                            self.playerObserver.playerItem = item
+                            
+                            self.player?.replaceCurrentItem(with: item)
+                            
+                            self.playerObserver.player = self.player
 
-                let audioSession = AVAudioSession.sharedInstance()
-                try? audioSession.setCategory(.playback)
-                try? audioSession.setActive(true)
-                
-                playerObserver.playerItem = item
-                
-                self.player?.replaceCurrentItem(with: item)
-                
-                playerObserver.player = self.player
-                
-                if let autoplay = source["autoplay"] as? Bool, autoplay {
-                    self.paused = false
-                    self.player?.play()
-                } else {
-                    self.paused = true
-                    self.player?.pause()
-                }
-
-                if let volume = source["volume"] as? NSNumber {
-                    self.volume = volume
-                    self.player?.volume = volume.floatValue
-                }
+                            self.player?.actionAtItemEnd = .none
+                            
+                            if let autoplay = source["autoplay"] as? Bool, autoplay {
+                                self.paused = false
+                                self.player?.play()
+                            } else {
+                                self.paused = true
+                                self.player?.pause()
+                            }
+                            
+                            if let volume = source["volume"] as? NSNumber {
+                                self.volume = volume
+                                self.player?.volume = volume.floatValue
+                            }
+                        }
+                    }.catch{ _ in }
             }
         }
+        DispatchQueue.global(qos: .default).async(execute: dispatchClosure)
     }
 
     func play() {
@@ -184,8 +205,11 @@ class Player: NSObject, PlayerObserverHandler {
         let duration = CMTimeGetSeconds(playerItem.asset.duration)
         let currentTime = CMTimeGetSeconds(playerItem.currentTime())
         
-        playerObserver.attachPlayerEventListeners()
-
+        let dispatchClosure = {
+            self.playerObserver.attachPlayerEventListeners()
+        }
+        DispatchQueue.global(qos: .default).async(execute: dispatchClosure)
+        
         sendPlayerEvent("ON_LOAD", [
             "duration": NSNumber(value: duration),
             "currentTime": NSNumber(value: currentTime),
@@ -202,7 +226,7 @@ class Player: NSObject, PlayerObserverHandler {
         let error = playerItem.error! as NSError
         sendPlayerEvent("ON_ERROR", [
             "errorCode": NSNumber(value: error.code),
-            "errorMessage": error.localizedDescription 
+            "errorMessage": error.localizedDescription
         ])
     }
 

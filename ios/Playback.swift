@@ -4,7 +4,7 @@ class Playback: RCTEventEmitter {
     static var players = [String: Player]()
 
     @objc override static func requiresMainQueueSetup() -> Bool {
-        return false
+        return true
     }
 
     @objc(createPlayer:resolve:reject:)

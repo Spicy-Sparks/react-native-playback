@@ -1,4 +1,5 @@
 import AVKit
+import Promises
 
 class VideoView: UIView {
     private var playerId: String?
@@ -20,6 +21,9 @@ class VideoView: UIView {
         playerViewController = VideoViewController()
         playerViewController.updatesNowPlayingInfoCenter = false
         playerViewController.allowsPictureInPicturePlayback = false
+        if #available(iOS 16.0, *) {
+            playerViewController.allowsVideoFrameAnalysis = false
+        }
         playerViewController.view.frame = bounds
         
         NotificationCenter.default.addObserver(self, selector: #selector(applicationDidEnterBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
@@ -33,48 +37,36 @@ class VideoView: UIView {
     @objc
     func setPlayerId(_ playerId: String) {
         self.playerId = playerId
-        player = Playback.players[playerId]?.player
+        self.player = Playback.players[playerId]?.player
         
-        guard let player = player else {
+        guard let player = self.player else {
             return
         }
         
-        playerViewController.player = player
+        self.playerViewController.player = player
         
-//        var viewController: UIViewController?
-//        var nextResponder: UIResponder? = self
-//        
-//        while nextResponder != nil {
-//            nextResponder = nextResponder?.next
-//            if let responder = nextResponder as? UIViewController {
-//                viewController = responder
-//                break
-//            }
-//        }
-        
-        guard let keyWindow = UIApplication.shared.keyWindow,
-              let rootViewController = keyWindow.rootViewController else {
-            return
+        var viewController = self.reactViewController()
+    
+        if (viewController == nil) {
+            guard let keyWindow = UIApplication.shared.keyWindow,
+                  let rootViewController = keyWindow.rootViewController else {
+                return
+            }
+
+            while let presentedViewController = rootViewController.presentedViewController {
+                viewController = presentedViewController
+            }
         }
-        
-        var viewController: UIViewController? = rootViewController
-        
-        while let presentedViewController = viewController?.presentedViewController {
-            viewController = presentedViewController
-        }
-        
-        
         
         if let viewController = viewController {
-            viewController.addChild(playerViewController)
-            addSubview(playerViewController.view)
+            viewController.addChild(self.playerViewController)
+            self.addSubview(self.playerViewController.view)
         }
         
-        playerLayer = AVPlayerLayer(player: player)
-        playerLayer?.frame = frame
-        layer.addSublayer(playerLayer!)
+        self.playerLayer = AVPlayerLayer(player: player)
+        self.playerLayer?.frame = self.frame
         
-        print("Received playerId: \(playerId)")
+        self.layer.addSublayer(self.playerLayer!)
     }
     
     @objc private func applicationDidEnterBackground(_ notification: Notification) {
