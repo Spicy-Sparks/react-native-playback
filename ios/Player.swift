@@ -34,7 +34,7 @@ class Player: NSObject, PlayerObserverHandler {
                     .then{ [weak self] in
                         guard let self = self else { return }
                 
-                        guard !self.disposed else { return }
+                        guard self.disposed else { return }
                         
                         self.disposed = true
                         
@@ -105,6 +105,8 @@ class Player: NSObject, PlayerObserverHandler {
 
                             self.player?.actionAtItemEnd = .none
                             
+                            self.player?.allowsExternalPlayback = true
+                            
                             if let autoplay = source["autoplay"] as? Bool, autoplay {
                                 self.paused = false
                                 self.player?.play()
@@ -126,21 +128,21 @@ class Player: NSObject, PlayerObserverHandler {
 
     func play() {
         paused = false
-        guard let player = player else { return }
+        if (player == nil) { return }
         configureAudio()
-        player.play()
+        player?.play()
     }
 
     func pause() {
         paused = true
-        guard let player = player else { return }
-        player.pause()
+        if (player == nil) { return }
+        player?.pause()
     }
 
     func setVolume(_ volume: NSNumber) {
         self.volume = volume
-        guard let player = player else { return }
-        player.volume = volume.floatValue
+        if (player == nil) { return }
+        player?.volume = volume.floatValue
     }
 
     func setLoop(_ loop: Bool) {
@@ -148,21 +150,22 @@ class Player: NSObject, PlayerObserverHandler {
     }
 
     func seek(_ seek: NSDictionary) {
-        guard let player = player,
-              let time = seek["time"] as? NSNumber,
+        if (player == nil) { return }
+        
+        guard let time = seek["time"] as? NSNumber,
               let tolerance = seek["tolerance"] as? NSNumber else {
             return
         }
         
         let timeScale = CMTimeScale(1000)
         
-        if let item = player.currentItem, item.status == .readyToPlay {
+        if let item = player?.currentItem, item.status == .readyToPlay {
             let cmSeekTime = CMTimeMakeWithSeconds(time.doubleValue, preferredTimescale: timeScale)
             let current = item.currentTime()
             let cmTolerance = CMTimeMakeWithSeconds(tolerance.doubleValue, preferredTimescale: timeScale)
             
             if CMTimeCompare(current, cmSeekTime) != 0 {
-                player.seek(to: cmSeekTime, toleranceBefore: cmTolerance, toleranceAfter: cmTolerance) { [weak self] finished in
+                player?.seek(to: cmSeekTime, toleranceBefore: cmTolerance, toleranceAfter: cmTolerance) { [weak self] finished in
                     guard let self = self else { return }
                     let currentTime = CMTimeGetSeconds(item.currentTime())
                     let seekTimeValue = NSValue(time: cmSeekTime)

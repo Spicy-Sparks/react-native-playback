@@ -1,10 +1,7 @@
 import AVKit
-import Promises
 
 class VideoView: UIView {
-    private var playerId: String?
     private var player: AVPlayer?
-    private var playerViewController = VideoViewController()
     private var playerLayer: AVPlayerLayer?
     
     override init(frame: CGRect) {
@@ -18,72 +15,43 @@ class VideoView: UIView {
     }
     
     private func commonInit() {
-        playerViewController = VideoViewController()
-        playerViewController.updatesNowPlayingInfoCenter = false
-        playerViewController.allowsPictureInPicturePlayback = false
-        if #available(iOS 16.0, *) {
-            playerViewController.allowsVideoFrameAnalysis = false
-        }
-        playerViewController.view.frame = bounds
-        
         NotificationCenter.default.addObserver(self, selector: #selector(applicationDidEnterBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(applicationWillEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
     }
     
+    private func removePlayerLayer() {
+        layer.sublayers?.reversed().forEach { $0.removeFromSuperlayer() }
+        playerLayer = nil
+    }
+    
     deinit {
         NotificationCenter.default.removeObserver(self)
+        removePlayerLayer()
     }
     
     @objc
     func setPlayerId(_ playerId: String) {
-        self.playerId = playerId
-        self.player = Playback.players[playerId]?.player
-        
-        guard let player = self.player else {
-            return
+        DispatchQueue.main.async {
+            self.removePlayerLayer()
+            
+            self.player = Playback.players[playerId]?.player
+            if (self.player == nil) { return }
+            
+            self.playerLayer = AVPlayerLayer(player: self.player)
+            if (self.playerLayer == nil) { return }
+            
+            self.playerLayer?.frame = self.frame
+            self.layer.addSublayer(self.playerLayer!)
         }
-        
-        self.playerViewController.player = player
-        
-        var viewController = self.reactViewController()
-    
-        if (viewController == nil) {
-            guard let keyWindow = UIApplication.shared.keyWindow,
-                  let rootViewController = keyWindow.rootViewController else {
-                return
-            }
-
-            while let presentedViewController = rootViewController.presentedViewController {
-                viewController = presentedViewController
-            }
-        }
-        
-        if let viewController = viewController {
-            viewController.addChild(self.playerViewController)
-            self.addSubview(self.playerViewController.view)
-        }
-        
-        self.playerLayer = AVPlayerLayer(player: player)
-        self.playerLayer?.frame = self.frame
-        
-        self.layer.addSublayer(self.playerLayer!)
     }
     
     @objc private func applicationDidEnterBackground(_ notification: Notification) {
-        guard let _ = player, let playerLayer = playerLayer else {
-            return
-        }
-        
-        playerLayer.player = nil
-        playerViewController.player = nil
+        if (player == nil || playerLayer == nil) { return }
+        playerLayer?.player = nil
     }
     
     @objc private func applicationWillEnterForeground(_ notification: Notification) {
-        guard let player = player, let playerLayer = playerLayer else {
-            return
-        }
-        
-        playerLayer.player = player
-        
+        if (player == nil || playerLayer == nil) { return }
+        playerLayer?.player = player
     }
 }
