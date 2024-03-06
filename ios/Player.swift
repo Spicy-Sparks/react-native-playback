@@ -207,6 +207,8 @@ class Player: NSObject, PlayerObserverHandler {
     func handleReadyToPlay(playerItem: AVPlayerItem) {
         let duration = CMTimeGetSeconds(playerItem.asset.duration)
         let currentTime = CMTimeGetSeconds(playerItem.currentTime())
+        let videoWidth = playerItem.tracks.first?.assetTrack?.naturalSize.width ?? 0
+        let videoHeight = playerItem.tracks.first?.assetTrack?.naturalSize.height ?? 0
         
         let dispatchClosure = {
             self.playerObserver.attachPlayerEventListeners()
@@ -221,7 +223,9 @@ class Player: NSObject, PlayerObserverHandler {
             "canPlaySlowForward": NSNumber(value: playerItem.canPlaySlowForward),
             "canPlaySlowReverse": NSNumber(value: playerItem.canPlaySlowReverse),
             "canStepBackward": NSNumber(value: playerItem.canStepBackward),
-            "canStepForward": NSNumber(value: playerItem.canStepForward)
+            "canStepForward": NSNumber(value: playerItem.canStepForward),
+            "videoWidth": NSNumber(value: videoWidth),
+            "videoHeight": NSNumber(value: videoHeight)
         ])
     }
 

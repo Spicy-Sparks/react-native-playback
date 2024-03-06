@@ -11,6 +11,7 @@ import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 import com.google.android.exoplayer2.ExoPlayer;
+import com.google.android.exoplayer2.Format;
 import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.MediaMetadata;
 import com.google.android.exoplayer2.PlaybackException;
@@ -99,6 +100,15 @@ public class Player {
             }
             case com.google.android.exoplayer2.Player.STATE_READY: {
               runOnUiThread(() -> {
+                if(player == null)
+                  return;
+                int videoWidth = 0;
+                int videoHeight = 0;
+                Format videoFormat = player.getVideoFormat();
+                if (videoFormat != null) {
+                  videoWidth = videoFormat.width;
+                  videoHeight = videoFormat.height;
+                }
                 WritableMap params = Arguments.createMap();
                 params.putString("eventType", "ON_LOAD");
                 params.putString("playerId", playerId);
@@ -110,6 +120,8 @@ public class Player {
                 params.putBoolean("canPlaySlowReverse", true);
                 params.putBoolean("canStepBackward", true);
                 params.putBoolean("canStepForward", true);
+                params.putInt("videoWidth", videoWidth);
+                params.putInt("videoHeight", videoHeight);
                 sendEvent(params);
               });
               break;
