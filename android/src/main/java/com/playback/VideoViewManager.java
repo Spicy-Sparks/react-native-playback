@@ -27,4 +27,7 @@ public class VideoViewManager extends SimpleViewManager<VideoView> {
   public void setPlayerId(VideoView view, String playerId) {
     view.setPlayerId(playerId);
   }
+
+  @ReactProp(name = "resizeMode")
+  public void setResizeMode(VideoView view, String resizeMode) { view.setResizeMode(resizeMode); }
 }

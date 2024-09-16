@@ -1,23 +1,24 @@
 package com.playback;
 
+import static androidx.media3.common.Player.STATE_BUFFERING;
+import static androidx.media3.common.Player.STATE_ENDED;
+import static androidx.media3.common.Player.STATE_IDLE;
+import static androidx.media3.common.Player.STATE_READY;
+
 import android.os.Handler;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.media3.common.MediaItem;
+import androidx.media3.common.PlaybackException;
+import androidx.media3.common.VideoSize;
+import androidx.media3.exoplayer.ExoPlayer;
+import androidx.media3.ui.PlayerView;
 
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
-import com.google.android.exoplayer2.ExoPlayer;
-import com.google.android.exoplayer2.Format;
-import com.google.android.exoplayer2.MediaItem;
-import com.google.android.exoplayer2.MediaMetadata;
-import com.google.android.exoplayer2.PlaybackException;
-import com.google.android.exoplayer2.Timeline;
-import com.google.android.exoplayer2.ui.PlayerView;
-import com.google.android.exoplayer2.DefaultRenderersFactory;
 
 import static com.facebook.react.bridge.UiThreadUtil.runOnUiThread;
 
@@ -31,16 +32,23 @@ public class Player {
   private double volume;
   private boolean loop;
 
-  private com.google.android.exoplayer2.Player.Listener eventsListener;
+  private androidx.media3.common.Player.Listener eventsListener;
   private final Handler progressHandler = new Handler();
   private Runnable progressRunnable;
+
+  private final Handler volumeFadeHandler = new Handler();
+  private Runnable volumeFadeTimer = null;
+  private double volumeFadeStart = 0;
+  private float volumeFadeDuration = 3;
+  private float volumeFadeTarget = 1;
+  private float volumeFadeInitialVolume = 0;
 
   public Player (ReactContext reactContext, String playerId, InitCallback callback) {
     this.context = reactContext;
 
     runOnUiThread(() -> {
       this.playerId = playerId;
-      this.player = new ExoPlayer.Builder(reactContext) .setRenderersFactory(new DefaultRenderersFactory(reactContext).setEnableDecoderFallback(true)).build();
+      this.player = new ExoPlayer.Builder(reactContext).build();
 
       this.progressRunnable = new Runnable() {
         private void sendEvent(@Nullable WritableMap params) {
@@ -65,7 +73,7 @@ public class Player {
         }
       };
 
-      this.eventsListener = new com.google.android.exoplayer2.Player.Listener() {
+      this.eventsListener = new androidx.media3.common.Player.Listener() {
         private void sendEvent(@Nullable WritableMap params) {
           reactContext
             .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
@@ -73,41 +81,26 @@ public class Player {
         }
 
         @Override
-        public void onTimelineChanged(@NonNull Timeline timeline, int reason) {
-          com.google.android.exoplayer2.Player.Listener.super.onTimelineChanged(timeline, reason);
-        }
-
-        @Override
-        public void onMediaMetadataChanged(@NonNull MediaMetadata mediaMetadata) {
-          com.google.android.exoplayer2.Player.Listener.super.onMediaMetadataChanged(mediaMetadata);
-        }
-
-        @Override
-        public void onIsLoadingChanged(boolean isLoading) {
-          com.google.android.exoplayer2.Player.Listener.super.onIsLoadingChanged(isLoading);
-        }
-
-        @Override
         public void onPlaybackStateChanged(int playbackState) {
-          com.google.android.exoplayer2.Player.Listener.super.onPlaybackStateChanged(playbackState);
+          androidx.media3.common.Player.Listener.super.onPlaybackStateChanged(playbackState);
           switch (playbackState) {
-            case com.google.android.exoplayer2.Player.STATE_BUFFERING: {
+            case STATE_BUFFERING: {
               WritableMap params = Arguments.createMap();
               params.putString("eventType", "ON_BUFFERING");
               params.putString("playerId", playerId);
               sendEvent(params);
               break;
             }
-            case com.google.android.exoplayer2.Player.STATE_READY: {
+            case STATE_READY: {
               runOnUiThread(() -> {
                 if(player == null)
                   return;
                 int videoWidth = 0;
                 int videoHeight = 0;
-                Format videoFormat = player.getVideoFormat();
-                if (videoFormat != null) {
-                  videoWidth = videoFormat.width;
-                  videoHeight = videoFormat.height;
+                VideoSize videoSize = player.getVideoSize();
+                if (videoSize != null) {
+                  videoWidth = videoSize.width;
+                  videoHeight = videoSize.height;
                 }
                 WritableMap params = Arguments.createMap();
                 params.putString("eventType", "ON_LOAD");
@@ -126,14 +119,14 @@ public class Player {
               });
               break;
             }
-            case com.google.android.exoplayer2.Player.STATE_ENDED: {
+            case STATE_ENDED: {
               WritableMap params = Arguments.createMap();
               params.putString("eventType", "ON_END");
               params.putString("playerId", playerId);
               sendEvent(params);
               break;
             }
-            case com.google.android.exoplayer2.Player.STATE_IDLE: {
+            case STATE_IDLE: {
               WritableMap params = Arguments.createMap();
               params.putString("eventType", "ON_STALLED");
               params.putString("playerId", playerId);
@@ -145,7 +138,7 @@ public class Player {
 
         @Override
         public void onIsPlayingChanged(boolean isPlaying) {
-          com.google.android.exoplayer2.Player.Listener.super.onIsPlayingChanged(isPlaying);
+          androidx.media3.common.Player.Listener.super.onIsPlayingChanged(isPlaying);
           WritableMap params = Arguments.createMap();
           params.putString("eventType", isPlaying ? "ON_PLAY" : "ON_PAUSE");
           params.putString("playerId", playerId);
@@ -159,7 +152,7 @@ public class Player {
 
         @Override
         public void onPlayerError(PlaybackException error) {
-          com.google.android.exoplayer2.Player.Listener.super.onPlayerError(error);
+          androidx.media3.common.Player.Listener.super.onPlayerError(error);
           WritableMap params = Arguments.createMap();
           params.putString("eventType", "ON_ERROR");
           params.putString("playerId", playerId);
@@ -172,7 +165,7 @@ public class Player {
 
         @Override
         public void onPlayerErrorChanged(PlaybackException error) {
-          com.google.android.exoplayer2.Player.Listener.super.onPlayerErrorChanged(error);
+          androidx.media3.common.Player.Listener.super.onPlayerErrorChanged(error);
           WritableMap params = Arguments.createMap();
           params.putString("eventType", "ON_ERROR");
           params.putString("playerId", playerId);
@@ -184,18 +177,19 @@ public class Player {
         }
 
         @Override
-        public void onPositionDiscontinuity(@NonNull com.google.android.exoplayer2.Player.PositionInfo oldPosition, @NonNull com.google.android.exoplayer2.Player.PositionInfo newPosition, int reason) {
-          com.google.android.exoplayer2.Player.Listener.super.onPositionDiscontinuity(oldPosition, newPosition, reason);
+        public void onPositionDiscontinuity(androidx.media3.common.Player.PositionInfo oldPosition, androidx.media3.common.Player.PositionInfo newPosition, int reason) {
+          androidx.media3.common.Player.Listener.super.onPositionDiscontinuity(oldPosition, newPosition, reason);
           if(oldPosition.positionMs <= 0 && newPosition.positionMs <= 0)
             return;
           WritableMap params = Arguments.createMap();
           params.putString("eventType", "ON_SEEK");
           params.putString("playerId", playerId);
-          params.putDouble("seekTime", (double) newPosition.positionMs / 1000);
+          params.putDouble("currentTime", (double) newPosition.positionMs / 1000);
           params.putDouble("seekTime", (double) newPosition.positionMs / 1000);
           sendEvent(params);
         }
       };
+
       this.player.addListener(eventsListener);
 
       callback.onCreated();
@@ -203,6 +197,7 @@ public class Player {
   }
 
   public void dispose() {
+    stopVolumeFade(false);
     runOnUiThread(() -> {
       if(this.player != null) {
         this.player.release();
@@ -218,6 +213,8 @@ public class Player {
   }
 
   public void setSource(ReadableMap source) {
+    stopVolumeFade(false);
+
     runOnUiThread(() -> {
       if(this.player == null)
         return;
@@ -261,6 +258,7 @@ public class Player {
 
   public void setVolume(double volume) {
     this.volume = volume;
+    stopVolumeFade(false);
     runOnUiThread(() -> {
       if(this.player == null)
         return;
@@ -272,11 +270,80 @@ public class Player {
     this.loop = loop;
   }
 
-  public void seek(ReadableMap seek) {
+  public void seek(ReadableMap seek, SeekCallback callback) {
     runOnUiThread(() -> {
-      if(this.player == null)
+      if(player == null) {
+        callback.onSeekComplete(false);
         return;
-      this.player.seekTo((long) (seek.getDouble("time") * 1000));
+      }
+      var targetPosition = seek.getDouble("time");
+      if(player.getCurrentPosition() / 1000 == targetPosition) {
+        callback.onSeekComplete(false);
+        return;
+      }
+      stopVolumeFade(true);
+      this.player.seekTo((long) (targetPosition * 1000));
+      callback.onSeekComplete(true);
     });
+  }
+
+  public void fadeVolume(float target, float duration) {
+    runOnUiThread(() -> {
+      if (duration <= 0 || player == null)
+        return;
+
+      if (volumeFadeTimer != null)
+        stopVolumeFade(true);
+
+      volumeFadeStart = System.currentTimeMillis();
+      volumeFadeTarget = target;
+      volumeFadeDuration = duration;
+      volumeFadeInitialVolume = player.getVolume();
+
+      this.volumeFadeTimer = new Runnable() {
+        @Override
+        public void run() {
+          runOnUiThread(() -> {
+            if (player == null || volumeFadeStart <= 0)
+              return;
+
+            var timePassed = (System.currentTimeMillis() - volumeFadeStart) / 1000 / volumeFadeDuration;
+
+            if (player.getVolume() < volumeFadeTarget) {
+              var volumeIncrement = Math.pow(timePassed, 2) * volumeFadeTarget;
+              var newVolume = Math.min(volumeIncrement, volumeFadeTarget);
+              player.setVolume((float) newVolume);
+              volumeFadeHandler.postDelayed(this, 100);
+            } else if (player.getVolume() > volumeFadeTarget) {
+              var volumeIncrement = -Math.pow(timePassed, 2) + volumeFadeInitialVolume;
+              var newVolume = Math.max(volumeIncrement, volumeFadeTarget);
+              player.setVolume((float) newVolume);
+              volumeFadeHandler.postDelayed(this, 100);
+            } else {
+              volume = volumeFadeTarget;
+              stopVolumeFade(true);
+            }
+          });
+        }
+      };
+
+      volumeFadeHandler.postDelayed(this.volumeFadeTimer, 1000);
+    });
+  }
+
+  private void stopVolumeFade (boolean changeVolume) {
+    volumeFadeStart = 0;
+    if(volumeFadeTimer != null) {
+      volumeFadeHandler.removeCallbacks(volumeFadeTimer);
+      volumeFadeTimer = null;
+    }
+    volumeFadeInitialVolume = 0;
+    if(changeVolume) {
+      runOnUiThread(() -> {
+        if (player == null)
+          return;
+        player.setVolume((float) volume);
+      });
+    }
   }
 }

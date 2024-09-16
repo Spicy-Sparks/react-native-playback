@@ -1,4 +1,4 @@
-import type { EmitterSubscription } from 'react-native'
+import { Platform, type EmitterSubscription } from 'react-native'
 import Module, { emitter } from './module'
 
 export type SourceType = {
@@ -9,11 +9,14 @@ export type SourceType = {
 }
 
 class Player {
+  public type: string = 'direct'
+
   private playerId: string = ''
   private source: SourceType | null = null
   private volume: number = 1
   private paused: boolean = false
   private loop: boolean = false
+  private toggledPlayPause: boolean = false
   private eventListeners: Record<string, Function[]> = {}
   private nativeEventSubscription: EmitterSubscription | null = null
 
@@ -27,7 +30,9 @@ class Player {
   
   private removeNativeEventSubscription() {
     if (this.nativeEventSubscription) {
+      // @ts-ignore
       if(emitter.removeSubscription)
+        // @ts-ignore
         emitter.removeSubscription(this.nativeEventSubscription)
       else
         this.nativeEventSubscription.remove()
@@ -71,6 +76,7 @@ class Player {
     if(typeof volume === 'number')
       this.volume = volume
     this.paused = !autoplay
+    this.toggledPlayPause = false
     Module.setSource(this.playerId, data)
   }
 
@@ -78,15 +84,17 @@ class Player {
     return this.source
   }
 
-  public play() {
+  public async play() {
     if (!this.playerId) return
     this.paused = false
+    this.toggledPlayPause = true
     Module.play(this.playerId)
   }
 
-  public pause() {
+  public async pause() {
     if (!this.playerId) return
     this.paused = true
+    this.toggledPlayPause = true
     Module.pause(this.playerId)
   }
 
@@ -114,9 +122,19 @@ class Player {
     return this.loop
   }
 
-  public seek(time: { time: number, tolerance?: number }) {
-    if (!this.playerId || !time || typeof time.time !== 'number') return
-    Module.seek(this.playerId, time)
+  public async seek(time: { time: number, tolerance?: number }): Promise<{
+    seeked: boolean
+  }> {
+    if (!this.playerId || !time || typeof time.time !== 'number')
+      return Promise.reject(new Error("Invalid data"))
+    return await Module.seek(this.playerId, time)
+  }
+
+  public fadeVolume(fade: { volume: number, duration?: number }) {
+    if (!this.playerId || typeof fade.volume !== 'number') return
+    if (!fade.duration || fade.duration < 0) fade.duration = 5
+    this.volume = this.volume
+    Module.fadeVolume(this.playerId, fade.volume, fade.duration)
   }
 
   private generateId() {
@@ -144,10 +162,14 @@ class Player {
         this.emit('stalled', eventData)
         return
       case 'ON_PLAY':
+        if (Platform.OS === 'ios' && !this.toggledPlayPause)
+          return
         this.paused = false
         this.emit('play', eventData)
         return
       case 'ON_PAUSE':
+        if (Platform.OS === 'ios' && !this.toggledPlayPause)
+          return
         this.paused = true
         this.emit('pause', eventData)
         return
@@ -162,6 +184,9 @@ class Player {
         return
       case 'ON_BECOME_NOISY':
         this.emit('becomeNoisy', eventData)
+        return
+      case 'ON_EXTERNAL_PLAYER':
+        this.emit('externalPlayer', eventData)
         return
     }
   }

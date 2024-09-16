@@ -11,6 +11,12 @@ class Player: NSObject, PlayerObserverHandler {
     private var loop: Bool? = false
     private var playerObserver: PlayerObserver = PlayerObserver()
     
+    private var volumeFadeTimer: Timer?
+    private var volumeFadeStart: Double?
+    private var volumeFadeDuration: Float = 3
+    private var volumeFadeTarget: Float = 1
+    private var volumeFadeInitialVolume: Float = 0
+    
     init(eventEmitter: RCTEventEmitter, playerId: String) {
         self.eventEmitter = eventEmitter
         self.playerId = playerId
@@ -37,6 +43,8 @@ class Player: NSObject, PlayerObserverHandler {
                         guard self.disposed else { return }
                         
                         self.disposed = true
+                        
+                        self.stopVolumeFade(false)
                         
                         if let player = self.player {
                             player.pause()
@@ -69,6 +77,8 @@ class Player: NSObject, PlayerObserverHandler {
                 self.delay()
                     .then{ [weak self] in
                         guard let self = self else { return }
+                        
+                        self.stopVolumeFade(false)
                         
                         self.playerObserver.player = nil
                         self.playerObserver.playerItem = nil
@@ -140,6 +150,7 @@ class Player: NSObject, PlayerObserverHandler {
     }
 
     func setVolume(_ volume: NSNumber) {
+        stopVolumeFade(false)
         self.volume = volume
         if (player == nil) { return }
         player?.volume = volume.floatValue
@@ -149,14 +160,14 @@ class Player: NSObject, PlayerObserverHandler {
         self.loop = loop
     }
 
-    func seek(_ seek: NSDictionary) {
-        if (player == nil) { return }
+    func seek(_ seek: NSDictionary) -> Bool {
+        if (player == nil || player?.currentItem == nil) { return false }
         
         guard let time = seek["time"] as? NSNumber,
               let tolerance = seek["tolerance"] as? NSNumber else {
-            return
+            return false
         }
-        
+            
         let timeScale = CMTimeScale(1000)
         
         if let item = player?.currentItem, item.status == .readyToPlay {
@@ -165,6 +176,7 @@ class Player: NSObject, PlayerObserverHandler {
             let cmTolerance = CMTimeMakeWithSeconds(tolerance.doubleValue, preferredTimescale: timeScale)
             
             if CMTimeCompare(current, cmSeekTime) != 0 {
+                stopVolumeFade(true)
                 player?.seek(to: cmSeekTime, toleranceBefore: cmTolerance, toleranceAfter: cmTolerance) { [weak self] finished in
                     guard let self = self else { return }
                     let currentTime = CMTimeGetSeconds(item.currentTime())
@@ -174,7 +186,51 @@ class Player: NSObject, PlayerObserverHandler {
                         "seekTime": seekTimeValue
                     ])
                 }
+                return true
             }
+        }
+        return false
+    }
+    
+    func fadeVolume(_ target: NSNumber, _ duration: NSNumber) {
+        if (duration.floatValue <= 0 || self.player == nil) { return }
+        
+        if (volumeFadeTimer != nil) { stopVolumeFade(true) }
+        
+        volumeFadeStart = Date().timeIntervalSince1970
+        volumeFadeTarget = target.floatValue
+        volumeFadeDuration = duration.floatValue
+        volumeFadeInitialVolume = self.player!.volume
+        
+        DispatchQueue.main.async {
+            self.volumeFadeTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { (timer) in
+                if (self.player == nil || self.volumeFadeStart == nil) { return }
+                
+                let timePassed = (Date().timeIntervalSince1970 - self.volumeFadeStart!) / Double(self.volumeFadeDuration)
+            
+                if self.player!.volume < self.volumeFadeTarget {
+                    let volumeIncrement = pow(Float(timePassed), 2) * self.volumeFadeTarget
+                    let newVolume = min(volumeIncrement, self.volumeFadeTarget)
+                    self.player!.volume = newVolume
+                } else if self.player!.volume > self.volumeFadeTarget {
+                    let volumeIncrement = -pow(Float(timePassed), 2) + self.volumeFadeInitialVolume
+                    let newVolume = max(volumeIncrement, self.volumeFadeTarget)
+                    self.player!.volume = newVolume
+                } else {
+                    self.volume = NSNumber(value: self.volumeFadeTarget)
+                    self.stopVolumeFade(true)
+                }
+            }
+        }
+    }
+    
+    func stopVolumeFade (_ changeVolume: Bool) {
+        volumeFadeStart = nil
+        volumeFadeTimer?.invalidate()
+        volumeFadeTimer = nil
+        volumeFadeInitialVolume = 0
+        if (volume != nil && changeVolume) {
+            player?.volume = volume!.floatValue
         }
     }
     
@@ -192,15 +248,21 @@ class Player: NSObject, PlayerObserverHandler {
             sendPlayerEvent("ON_PAUSE")
         }
     }
+    
+    func handleExternalPlaybackActiveChange(player: AVPlayer, change: NSKeyValueObservedChange<Bool>) {
+        sendPlayerEvent("ON_EXTERNAL_PLAYER", [
+            "connected": player.isExternalPlaybackActive 
+        ])
+    }
 
     func handlePlayerItemStatusChange(playerItem: AVPlayerItem, change: NSKeyValueObservedChange<AVPlayerItem.Status>) {
         switch playerItem.status {
-        case .readyToPlay:
-            handleReadyToPlay(playerItem: playerItem)
-        case .failed:
-            handleFailedToPlay(playerItem: playerItem)
-        default:
-            break
+            case .readyToPlay:
+                handleReadyToPlay(playerItem: playerItem)
+            case .failed:
+                handleFailedToPlay(playerItem: playerItem)
+            default:
+                break
         }
     }
 
@@ -223,7 +285,7 @@ class Player: NSObject, PlayerObserverHandler {
             "canPlaySlowForward": NSNumber(value: playerItem.canPlaySlowForward),
             "canPlaySlowReverse": NSNumber(value: playerItem.canPlaySlowReverse),
             "canStepBackward": NSNumber(value: playerItem.canStepBackward),
-            "canStepForward": NSNumber(value: playerItem.canStepForward),
+            "externalPlayback": player?.isExternalPlaybackActive ?? false,
             "videoWidth": NSNumber(value: videoWidth),
             "videoHeight": NSNumber(value: videoHeight)
         ])

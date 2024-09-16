@@ -17,6 +17,7 @@ protocol PlayerObserverHandler: PlayerObserverHandlerObjc {
     func handlePlaybackBufferKeyEmpty(playerItem:AVPlayerItem, change:NSKeyValueObservedChange<Bool>)
     func handlePlaybackLikelyToKeepUp(playerItem:AVPlayerItem, change:NSKeyValueObservedChange<Bool>)
     func handlePlaybackRateChange(player: AVPlayer, change: NSKeyValueObservedChange<Float>)
+    func handleExternalPlaybackActiveChange(player: AVPlayer, change: NSKeyValueObservedChange<Bool>)
 }
 
 class PlayerObserver: NSObject {
@@ -49,11 +50,13 @@ class PlayerObserver: NSObject {
     private var _timeObserver:Any?
     
     private var _playerRateChangeObserver:NSKeyValueObservation?
+    private var _playerExternalPlaybackActiveChangeObserver:NSKeyValueObservation?
     private var _playerItemStatusObserver:NSKeyValueObservation?
     private var _playerLoadedTimeRangesObserver:NSKeyValueObservation?
     private var _playerPlaybackBufferEmptyObserver:NSKeyValueObservation?
     private var _playerPlaybackLikelyToKeepUpObserver:NSKeyValueObservation?
     private var _playerTimedMetadataObserver:NSKeyValueObservation?
+    private var _playerExternalPlaybackObserver:NSKeyValueObservation?
     
     deinit {
         if let _handlers = _handlers {
@@ -64,10 +67,12 @@ class PlayerObserver: NSObject {
     func addPlayerObservers() {
         guard let player = player, let _handlers = _handlers else { return }
         _playerRateChangeObserver = player.observe(\.rate, options: [.old], changeHandler: _handlers.handlePlaybackRateChange)
+        _playerExternalPlaybackActiveChangeObserver = player.observe(\.isExternalPlaybackActive, options: [.old], changeHandler: _handlers.handleExternalPlaybackActiveChange)
     }
     
     func removePlayerObservers() {
         _playerRateChangeObserver?.invalidate()
+        _playerExternalPlaybackActiveChangeObserver?.invalidate()
     }
     
     func addPlayerItemObservers() {

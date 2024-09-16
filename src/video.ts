@@ -1,5 +1,5 @@
 import { requireNativeComponent, UIManager, Platform } from 'react-native';
-import type { ViewProps } from 'react-native';
+import type { ImageProps, ViewProps } from 'react-native';
 
 const LINKING_ERROR =
   `The package 'react-native-playback' doesn't seem to be linked. Make sure: \n\n` +
@@ -9,6 +9,7 @@ const LINKING_ERROR =
 
 type VideoViewProps = {
   playerId: string;
+  resizeMode?: ImageProps['resizeMode'];
   style?: ViewProps['style'];
 };
 

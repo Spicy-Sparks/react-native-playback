@@ -1,8 +1,10 @@
 import AVKit
 
 class VideoView: UIView {
+    private var playerId: String?
     private var player: AVPlayer?
     private var playerLayer: AVPlayerLayer?
+    private var resizeMode: String?
     
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -32,6 +34,8 @@ class VideoView: UIView {
     @objc
     func setPlayerId(_ playerId: String) {
         DispatchQueue.main.async {
+            self.playerId = playerId;
+            
             self.removePlayerLayer()
             
             self.player = Playback.players[playerId]?.player
@@ -42,7 +46,40 @@ class VideoView: UIView {
             
             self.playerLayer?.frame = self.frame
             self.layer.addSublayer(self.playerLayer!)
+            
+            self.applyResizeMode();
         }
+    }
+    
+    @objc
+    func setResizeMode(_ resizeMode: String) {
+        DispatchQueue.main.async {
+            self.resizeMode = resizeMode;
+            self.applyResizeMode();
+        }
+    }
+    
+    private func applyResizeMode () {
+        if (self.playerLayer == nil) {
+            return;
+        }
+        
+        var resizeMode: AVLayerVideoGravity = .resizeAspect
+
+        switch self.resizeMode {
+            case "contain":
+                resizeMode = .resizeAspect
+            case "none":
+                resizeMode = .resizeAspect
+            case "cover":
+                resizeMode = .resizeAspectFill
+            case "stretch":
+                resizeMode = .resize
+            default:
+                resizeMode = .resizeAspect
+        }
+        
+        self.playerLayer?.videoGravity = resizeMode;
     }
     
     @objc private func applicationDidEnterBackground(_ notification: Notification) {

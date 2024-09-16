@@ -2,28 +2,21 @@ package com.playback;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.os.Handler;
-import android.util.AttributeSet;
-import android.util.Log;
-import android.view.View;
-
-import com.facebook.react.uimanager.ThemedReactContext;
-import com.google.android.exoplayer2.ExoPlayer;
-import com.google.android.exoplayer2.MediaItem;
-import com.google.android.exoplayer2.SimpleExoPlayer;
-import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
-import com.google.android.exoplayer2.ui.PlayerView;
-
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import android.view.ViewGroup;
 
 import static com.facebook.react.bridge.UiThreadUtil.runOnUiThread;
+
+import androidx.annotation.OptIn;
+import androidx.media3.common.util.UnstableApi;
+import androidx.media3.ui.AspectRatioFrameLayout;
+import androidx.media3.ui.PlayerView;
 
 @SuppressLint("ViewConstructor")
 public class VideoView extends PlayerView {
   private String playerId;
   private Context context;
+
+  private String resizeMode;
 
   public VideoView(Context context) {
     super(context);
@@ -41,6 +34,39 @@ public class VideoView extends PlayerView {
         return;
       setUseController(false);
       setPlayer(player.player);
+      applyResizeMode();
     });
+  }
+
+  public void setResizeMode (String resizeMode) {
+    runOnUiThread(() -> {
+      this.resizeMode = resizeMode;
+      applyResizeMode();
+    });
+  }
+
+  @OptIn(markerClass = UnstableApi.class) public void applyResizeMode () {
+    if (this.resizeMode == null) {
+      this.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FILL);
+      return;
+    }
+
+    switch (this.resizeMode) {
+      case "contain":
+        this.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FIT);
+        break;
+      case "stretch": {
+        this.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH);
+        ViewGroup.LayoutParams layoutParams = this.getLayoutParams();
+        layoutParams.height = ViewGroup.LayoutParams.MATCH_PARENT;
+        this.setLayoutParams(layoutParams);
+        break;
+      }
+      case "none":
+      case "cover":
+      default:
+        this.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FILL);
+        break;
+    }
   }
 }

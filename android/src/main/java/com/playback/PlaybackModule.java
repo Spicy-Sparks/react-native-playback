@@ -2,12 +2,14 @@ package com.playback;
 
 import androidx.annotation.NonNull;
 
+import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.LifecycleEventListener;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableMap;
+import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.module.annotations.ReactModule;
 import java.util.HashMap;
 import java.util.Map;
@@ -123,7 +125,21 @@ public class PlaybackModule extends ReactContextBaseJavaModule implements Lifecy
       promise.reject("E_PLAYER_NOT_FOUND", "playerId is invalid");
       return;
     }
-    player.seek(seek);
+    player.seek(seek, seeked -> {
+      WritableMap result = Arguments.createMap();
+      result.putBoolean("seeked", seeked);
+      promise.resolve(result);
+    });
+  }
+
+  @ReactMethod
+  public void fadeVolume(String playerId, float target, float duration, Promise promise) {
+    var player = players.get(playerId);
+    if(player == null) {
+      promise.reject("E_PLAYER_NOT_FOUND", "playerId is invalid");
+      return;
+    }
+    player.fadeVolume(target, duration);
     promise.resolve(null);
   }
 
