@@ -87,13 +87,13 @@ class Playback: RCTEventEmitter {
         ])
     }
     
-    @objc(fadeVolume:target:duration:resolve:reject:)
-    func seek(playerId: String, target: NSNumber, duration: NSNumber, resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
+    @objc(fadeVolume:target:duration:fromVolume:resolve:reject:)
+    func fadeVolume(playerId: String, target: NSNumber, duration: NSNumber, fromVolume: NSNumber, resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
         guard let player = Playback.players[playerId] else {
             reject("E_PLAYER_NOT_FOUND", "playerId is invalid", nil)
             return
         }
-        player.fadeVolume(target, duration)
+        player.fadeVolume(target, duration, fromVolume)
         resolve(nil)
     }
 

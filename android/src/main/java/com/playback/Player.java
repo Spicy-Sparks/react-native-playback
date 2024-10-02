@@ -287,7 +287,7 @@ public class Player {
     });
   }
 
-  public void fadeVolume(float target, float duration) {
+  public void fadeVolume(float target, float duration, float fromVolume) {
     runOnUiThread(() -> {
       if (duration <= 0 || player == null)
         return;
@@ -298,7 +298,8 @@ public class Player {
       volumeFadeStart = System.currentTimeMillis();
       volumeFadeTarget = target;
       volumeFadeDuration = duration;
-      volumeFadeInitialVolume = player.getVolume();
+      player.setVolume(fromVolume);
+      volumeFadeInitialVolume = fromVolume;
 
       this.volumeFadeTimer = new Runnable() {
         @Override

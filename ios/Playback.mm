@@ -41,6 +41,7 @@ RCT_EXTERN_METHOD(seek:(NSString *)playerId
 RCT_EXTERN_METHOD(fadeVolume:(NSString *)playerId
                   target:(nonnull NSNumber *)target
                   duration:(nonnull NSNumber *)duration
+                  fromVolume:(nonnull NSNumber *)fromVolume
                   resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)
 

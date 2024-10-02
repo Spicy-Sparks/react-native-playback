@@ -192,7 +192,7 @@ class Player: NSObject, PlayerObserverHandler {
         return false
     }
     
-    func fadeVolume(_ target: NSNumber, _ duration: NSNumber) {
+    func fadeVolume(_ target: NSNumber, _ duration: NSNumber, _ fromVolume: NSNumber) {
         if (duration.floatValue <= 0 || self.player == nil) { return }
         
         if (volumeFadeTimer != nil) { stopVolumeFade(true) }
@@ -200,7 +200,8 @@ class Player: NSObject, PlayerObserverHandler {
         volumeFadeStart = Date().timeIntervalSince1970
         volumeFadeTarget = target.floatValue
         volumeFadeDuration = duration.floatValue
-        volumeFadeInitialVolume = self.player!.volume
+        self.player!.volume = fromVolume.floatValue
+        volumeFadeInitialVolume = fromVolume.floatValue
         
         DispatchQueue.main.async {
             self.volumeFadeTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { (timer) in

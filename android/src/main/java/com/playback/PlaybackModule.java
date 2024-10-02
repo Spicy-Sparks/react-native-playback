@@ -133,13 +133,13 @@ public class PlaybackModule extends ReactContextBaseJavaModule implements Lifecy
   }
 
   @ReactMethod
-  public void fadeVolume(String playerId, float target, float duration, Promise promise) {
+  public void fadeVolume(String playerId, float target, float duration, float fromVolume, Promise promise) {
     var player = players.get(playerId);
     if(player == null) {
       promise.reject("E_PLAYER_NOT_FOUND", "playerId is invalid");
       return;
     }
-    player.fadeVolume(target, duration);
+    player.fadeVolume(target, duration, fromVolume);
     promise.resolve(null);
   }
 
