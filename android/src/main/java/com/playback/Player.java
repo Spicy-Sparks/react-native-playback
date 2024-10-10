@@ -8,9 +8,13 @@ import static androidx.media3.common.Player.STATE_READY;
 import android.os.Handler;
 
 import androidx.annotation.Nullable;
+import androidx.annotation.OptIn;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.VideoSize;
+import androidx.media3.common.util.UnstableApi;
+import androidx.media3.exoplayer.DefaultLoadControl;
+import androidx.media3.exoplayer.DefaultRenderersFactory;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.ui.PlayerView;
 
@@ -43,12 +47,22 @@ public class Player {
   private float volumeFadeTarget = 1;
   private float volumeFadeInitialVolume = 0;
 
+  @OptIn(markerClass = UnstableApi.class)
   public Player (ReactContext reactContext, String playerId, InitCallback callback) {
     this.context = reactContext;
 
     runOnUiThread(() -> {
       this.playerId = playerId;
-      this.player = new ExoPlayer.Builder(reactContext).build();
+      DefaultRenderersFactory renderersFactory = new DefaultRenderersFactory(context)
+              .setEnableDecoderFallback(true)
+              .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON);
+      DefaultLoadControl loadControl = new DefaultLoadControl.Builder().setBufferDurationsMs(
+                DefaultLoadControl.DEFAULT_MIN_BUFFER_MS,
+                DefaultLoadControl.DEFAULT_MAX_BUFFER_MS,
+                DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS,
+                DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS
+              ).build();
+      this.player = new ExoPlayer.Builder(reactContext).setLoadControl(loadControl).setRenderersFactory(renderersFactory).build();
 
       this.progressRunnable = new Runnable() {
         private void sendEvent(@Nullable WritableMap params) {
