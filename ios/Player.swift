@@ -29,10 +29,6 @@ class Player: NSObject, PlayerObserverHandler {
         playerObserver._handlers = self
     }
     
-    deinit {
-        dispose()
-    }
-    
     func dispose() {
         let dispatchClosure = {
             do {
@@ -40,7 +36,7 @@ class Player: NSObject, PlayerObserverHandler {
                     .then{ [weak self] in
                         guard let self = self else { return }
                 
-                        guard self.disposed else { return }
+                        guard !self.disposed else { return }
                         
                         self.disposed = true
                         
