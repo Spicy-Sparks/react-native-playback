@@ -1,94 +1,81 @@
-import AVKit
+import UIKit
+import MobileVLCKit
 
 class VideoView: UIView {
     private var playerId: String?
-    private var player: AVPlayer?
-    private var playerLayer: AVPlayerLayer?
+    private var player: VLCMediaPlayer?
     private var resizeMode: String?
-    
+
     override init(frame: CGRect) {
         super.init(frame: frame)
         commonInit()
     }
-    
+
     required init?(coder aDecoder: NSCoder) {
         super.init(coder: aDecoder)
         commonInit()
     }
-    
+
     private func commonInit() {
         NotificationCenter.default.addObserver(self, selector: #selector(applicationDidEnterBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(applicationWillEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
     }
-    
-    private func removePlayerLayer() {
-        layer.sublayers?.reversed().forEach { $0.removeFromSuperlayer() }
-        playerLayer = nil
+
+    private func removePlayerView() {
+        subviews.forEach { $0.removeFromSuperview() }
     }
-    
+
     deinit {
         NotificationCenter.default.removeObserver(self)
-        removePlayerLayer()
+        removePlayerView()
     }
-    
+
     @objc
     func setPlayerId(_ playerId: String) {
         DispatchQueue.main.async {
-            self.playerId = playerId;
+            self.playerId = playerId
+            self.removePlayerView()
+
+            guard let vlcPlayer = Playback.players[playerId]?.player as? VLCMediaPlayer else { return }
+            self.player = vlcPlayer
+
+            let videoView = UIView(frame: self.bounds)
+            videoView.translatesAutoresizingMaskIntoConstraints = true
+            self.addSubview(videoView)
             
-            self.removePlayerLayer()
-            
-            self.player = Playback.players[playerId]?.player
-            if (self.player == nil) { return }
-            
-            self.playerLayer = AVPlayerLayer(player: self.player)
-            if (self.playerLayer == nil) { return }
-            
-            self.playerLayer?.frame = self.frame
-            self.layer.addSublayer(self.playerLayer!)
-            
-            self.applyResizeMode();
+            vlcPlayer.drawable = videoView
+            self.applyResizeMode()
         }
     }
-    
+
     @objc
     func setResizeMode(_ resizeMode: String) {
         DispatchQueue.main.async {
-            self.resizeMode = resizeMode;
-            self.applyResizeMode();
+            self.resizeMode = resizeMode
+            self.applyResizeMode()
         }
     }
-    
-    private func applyResizeMode () {
-        if (self.playerLayer == nil) {
-            return;
-        }
-        
-        var resizeMode: AVLayerVideoGravity = .resizeAspect
 
-        switch self.resizeMode {
-            case "contain":
-                resizeMode = .resizeAspect
-            case "none":
-                resizeMode = .resizeAspect
-            case "cover":
-                resizeMode = .resizeAspectFill
-            case "stretch":
-                resizeMode = .resize
-            default:
-                resizeMode = .resizeAspect
+    private func applyResizeMode() {
+        guard let vlcPlayer = player else { return }
+
+        switch resizeMode {
+        case "contain", "none":
+            vlcPlayer.scaleFactor = 0 // Maintains aspect ratio with black bars
+        case "cover":
+            vlcPlayer.scaleFactor = 1 // Crops to fill the view
+        case "stretch":
+            vlcPlayer.scaleFactor = -1 // Stretches the video
+        default:
+            vlcPlayer.scaleFactor = 0
         }
-        
-        self.playerLayer?.videoGravity = resizeMode;
     }
-    
+
     @objc private func applicationDidEnterBackground(_ notification: Notification) {
-        if (player == nil || playerLayer == nil) { return }
-        playerLayer?.player = nil
+        player?.pause()
     }
-    
+
     @objc private func applicationWillEnterForeground(_ notification: Notification) {
-        if (player == nil || playerLayer == nil) { return }
-        playerLayer?.player = player
+        player?.play()
     }
 }
