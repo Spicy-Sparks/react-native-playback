@@ -87,6 +87,16 @@ class Playback: RCTEventEmitter {
         ])
     }
     
+    @objc(setBufferSize:bytes:resolve:reject:)
+    func setBufferSize(playerId: String, bytes: NSNumber, resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
+        guard let player = Playback.players[playerId] else {
+            reject("E_PLAYER_NOT_FOUND", "playerId is invalid", nil)
+            return
+        }
+        player.setBufferSize(bytes)
+        resolve(nil)
+    }
+    
     @objc(fadeVolume:target:duration:fromVolume:resolve:reject:)
     func fadeVolume(playerId: String, target: NSNumber, duration: NSNumber, fromVolume: NSNumber, resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
         guard let player = Playback.players[playerId] else {

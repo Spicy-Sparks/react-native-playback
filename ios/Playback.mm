@@ -38,6 +38,11 @@ RCT_EXTERN_METHOD(seek:(NSString *)playerId
                   resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)
 
+RCT_EXTERN_METHOD(setBufferSize:(NSString *)playerId
+                  bytes:(nonnull NSNumber *)bytes
+                  resolve:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject)
+
 RCT_EXTERN_METHOD(fadeVolume:(NSString *)playerId
                   target:(nonnull NSNumber *)target
                   duration:(nonnull NSNumber *)duration

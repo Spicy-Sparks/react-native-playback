@@ -68,6 +68,7 @@ class Player {
     data: SourceType & {
       autoplay?: boolean;
       volume?: number;
+      bufferSize?: number;
     }
   ) {
     if (!this.playerId || !data || !data.url) return;
@@ -127,6 +128,11 @@ class Player {
     if (!this.playerId || !time || typeof time.time !== 'number')
       return Promise.reject(new Error('Invalid data'));
     return await Module.seek(this.playerId, time);
+  }
+
+  public setBufferSize(bytes: number) {
+    if (!this.playerId || Platform.OS !== 'ios') return;
+    Module.setBufferSize(this.playerId, bytes);
   }
 
   public fadeVolume(fade: {
