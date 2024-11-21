@@ -100,8 +100,8 @@ class Player: NSObject, PlayerObserverHandler {
                             
                             let item = AVPlayerItem(asset: asset)
                             
-                            if let startTime = source["bufferSize"] as? NSNumber {
-                                item.preferredForwardBufferDuration = TimeInterval((source["bufferSize"] as! NSNumber).floatValue)
+                            if let bufferSize = source["bufferSize"] as? NSNumber {
+                                item.preferredForwardBufferDuration = TimeInterval(bufferSize.floatValue)
                             } else {
                                 item.preferredForwardBufferDuration = 0.2
                             }
