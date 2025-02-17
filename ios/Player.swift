@@ -108,7 +108,16 @@ class Player: NSObject, PlayerObserverHandler {
                             
                             let audioSession = AVAudioSession.sharedInstance()
                             try? audioSession.setCategory(.playback)
-                            try? audioSession.setActive(true)
+                            
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                if audioSession.isOtherAudioPlaying == false {
+                                    do {
+                                        try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+                                    } catch {
+                                        print("Failed to activate audio session: \(error.localizedDescription)")
+                                    }
+                                }
+                            }
                             
                             self.playerObserver.playerItem = item
                             
@@ -366,18 +375,28 @@ class Player: NSObject, PlayerObserverHandler {
     }
 
     func configureAudio() {
-        let session = AVAudioSession.sharedInstance()
-        let category = AVAudioSession.Category.playback
-        let options: AVAudioSession.CategoryOptions = []
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            let session = AVAudioSession.sharedInstance()
+            let category = AVAudioSession.Category.playback
+            let options: AVAudioSession.CategoryOptions = []
 
-        if #available(iOS 13.0, *) {
-            try? session.setCategory(category, mode: .default, policy: .longFormAudio, options: options)
-        } else if #available(iOS 11.0, *) {
-            try? session.setCategory(category, mode: .default, policy: .longForm, options: options)
-        } else {
-            try? session.setCategory(category, options: options)
+            if #available(iOS 13.0, *) {
+                try? session.setCategory(category, mode: .default, policy: .longFormAudio, options: options)
+            } else if #available(iOS 11.0, *) {
+                try? session.setCategory(category, mode: .default, policy: .longForm, options: options)
+            } else {
+                try? session.setCategory(category, options: options)
+            }
+
+            // Ensure we only activate the session if it's not already active
+            if session.isOtherAudioPlaying == false {
+                do {
+                    try session.setActive(true, options: .notifyOthersOnDeactivation)
+                } catch {
+                    print("Failed to activate audio session: \(error.localizedDescription)")
+                }
+            }
         }
-        try? session.setActive(true)
     }
 
     func sendPlayerEvent(_ eventType: String, _ eventData: [String: Any]? = nil) {
