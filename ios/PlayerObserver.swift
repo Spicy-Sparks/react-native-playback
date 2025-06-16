@@ -46,7 +46,7 @@ class PlayerObserver: NSObject {
         }
     }
     
-    private var _progressUpdateInterval:TimeInterval = 250
+    private var _progressUpdateInterval:TimeInterval = 1000
     private var _timeObserver:Any?
     
     private var _playerRateChangeObserver:NSKeyValueObservation?
