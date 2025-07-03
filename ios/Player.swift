@@ -26,7 +26,7 @@ class Player: NSObject, PlayerObserverHandler {
         self.player?.allowsExternalPlayback = true
         self.player?.actionAtItemEnd = .none
         self.player?.automaticallyWaitsToMinimizeStalling = false;
-        self.configureAudio()
+        self.configureAudioSession()
         playerObserver._handlers = self
     }
     
@@ -44,7 +44,7 @@ class Player: NSObject, PlayerObserverHandler {
                         self.stopVolumeFade(false)
                         
                         if let player = self.player {
-                            player.pause()
+                            pause()
                             player.replaceCurrentItem(with: nil)
                             self.player = nil
                         }
@@ -106,19 +106,6 @@ class Player: NSObject, PlayerObserverHandler {
                                 item.preferredForwardBufferDuration = 0.2
                             }
                             
-                            let audioSession = AVAudioSession.sharedInstance()
-                            try? audioSession.setCategory(.playback)
-                            
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                if audioSession.isOtherAudioPlaying == false {
-                                    do {
-                                        try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
-                                    } catch {
-                                        print("Failed to activate audio session: \(error.localizedDescription)")
-                                    }
-                                }
-                            }
-                            
                             self.playerObserver.playerItem = item
                             
                             self.player?.replaceCurrentItem(with: item)
@@ -130,16 +117,13 @@ class Player: NSObject, PlayerObserverHandler {
                             self.player?.allowsExternalPlayback = true
                             
                             if let autoplay = source["autoplay"] as? Bool, autoplay {
-                                self.paused = false
-                                self.player?.play()
+                                play()
                             } else {
-                                self.paused = true
-                                self.player?.pause()
+                                pause()
                             }
                             
                             if let volume = source["volume"] as? NSNumber {
-                                self.volume = volume
-                                self.player?.volume = volume.floatValue
+                                setVolume(volume)
                             }
                         }
                     }.catch{ _ in }
@@ -151,7 +135,7 @@ class Player: NSObject, PlayerObserverHandler {
     func play() {
         paused = false
         if (player == nil) { return }
-        configureAudio()
+        activateAudioSession()
         player?.play()
     }
 
@@ -359,7 +343,7 @@ class Player: NSObject, PlayerObserverHandler {
 
         if let item = notification.object as? AVPlayerItem {
             item.seek(to: CMTime.zero, completionHandler: nil)
-            player?.play()
+            play()
         }
     }
 
@@ -374,28 +358,20 @@ class Player: NSObject, PlayerObserverHandler {
         }
     }
 
-    func configureAudio() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            let session = AVAudioSession.sharedInstance()
-            let category = AVAudioSession.Category.playback
-            let options: AVAudioSession.CategoryOptions = []
-
-            if #available(iOS 13.0, *) {
-                try? session.setCategory(category, mode: .default, policy: .longFormAudio, options: options)
-            } else if #available(iOS 11.0, *) {
-                try? session.setCategory(category, mode: .default, policy: .longForm, options: options)
-            } else {
-                try? session.setCategory(category, options: options)
-            }
-
-            // Ensure we only activate the session if it's not already active
-            if session.isOtherAudioPlaying == false {
-                do {
-                    try session.setActive(true, options: .notifyOthersOnDeactivation)
-                } catch {
-                    print("Failed to activate audio session: \(error.localizedDescription)")
-                }
-            }
+    func configureAudioSession() {
+        let session = AVAudioSession.sharedInstance()
+        let category = AVAudioSession.Category.playback
+        let options: AVAudioSession.CategoryOptions = []
+        try? session.setCategory(category, mode: .default, policy: .longFormAudio, options: options)
+    }
+    
+    func activateAudioSession() {
+        configureAudioSession()
+        let session = AVAudioSession.sharedInstance()
+        do {
+            try session.setActive(true, options: .notifyOthersOnDeactivation)
+        } catch {
+            print("Failed to activate audio session: \(error.localizedDescription)")
         }
     }
 
