@@ -25,7 +25,7 @@ class Player: NSObject, PlayerObserverHandler {
         self.disposed = false
         self.player?.allowsExternalPlayback = true
         self.player?.actionAtItemEnd = .none
-        self.player?.automaticallyWaitsToMinimizeStalling = false;
+        self.player?.automaticallyWaitsToMinimizeStalling = true;
         self.configureAudioSession()
         playerObserver._handlers = self
     }
@@ -100,11 +100,11 @@ class Player: NSObject, PlayerObserverHandler {
                             
                             let item = AVPlayerItem(asset: asset)
                             
-                            if let bufferSize = source["bufferSize"] as? NSNumber {
-                                item.preferredForwardBufferDuration = TimeInterval(bufferSize.floatValue)
-                            } else {
-                                item.preferredForwardBufferDuration = 0.2
-                            }
+                            // if let bufferSize = source["bufferSize"] as? NSNumber {
+                            //     item.preferredForwardBufferDuration = TimeInterval(bufferSize.floatValue)
+                            // } else {
+                            //     item.preferredForwardBufferDuration = 0.2
+                            // }
                             
                             self.playerObserver.playerItem = item
                             
@@ -189,7 +189,7 @@ class Player: NSObject, PlayerObserverHandler {
     }
     
     func setBufferSize(_ bytes: NSNumber) {
-        self.player?.currentItem?.preferredForwardBufferDuration = TimeInterval(bytes.floatValue);
+        // self.player?.currentItem?.preferredForwardBufferDuration = TimeInterval(bytes.floatValue);
     }
     
     func fadeVolume(_ target: NSNumber, _ duration: NSNumber, _ fromVolume: NSNumber) {
